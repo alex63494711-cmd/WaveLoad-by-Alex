@@ -190,7 +190,7 @@ class LoginWindow(ctk.CTk):
 
         self._pass_e.bind("<Return>",   lambda e: self._login())
         self._adm_e.bind("<Return>",    lambda e: self._admin_login())
-        self._reg_pass2.bind("<Return>",lambda e: self._register())
+        self._reg_pass2.bind("<Return>", lambda ev: self._register())
 
     def _login(self):
         u = self._user_e.get().strip()
