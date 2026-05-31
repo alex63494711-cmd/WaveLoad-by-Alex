@@ -68,6 +68,15 @@ class App(ctk.CTk):
         self.bind("<Control-v>", self._ctrl_v)
         self.bind("<Control-V>", self._ctrl_v)
 
+    def _smooth_scroll(self):
+        self._sa = True
+        cur = self._cvs.yview()[0]
+        diff = self._sy - cur
+        if abs(diff) < 0.0003:
+            self._cvs.yview_moveto(self._sy); self._sa = False; return
+        self._cvs.yview_moveto(cur + diff * 0.16)
+        self.after(11, self._smooth_scroll)
+
     def _set_icon(self):
         ico = get_icon_path()
         if ico:
@@ -93,10 +102,36 @@ class App(ctk.CTk):
     # ── UI BUILD ──────────────────────────────────────────────────────────────
     def _build_ui(self):
         # Scrollable main frame
-        self._scroll = ctk.CTkScrollableFrame(self, fg_color=BG, scrollbar_button_color=ACCENT,
-                                               scrollbar_button_hover_color=ACCENT_H,
-                                               corner_radius=0)
-        self._scroll.pack(fill="both", expand=True, padx=0, pady=0)
+        # Use Canvas for smooth custom scroll
+        import tkinter as tk
+        self._cvs = tk.Canvas(self, bg=BG, highlightthickness=0)
+        self._cvs.pack(side="left", fill="both", expand=True)
+        self._sbc = tk.Canvas(self, bg=BG, width=8, highlightthickness=0)
+        self._sbc.pack(side="right", fill="y", padx=(0,2))
+        self._sth = self._sbc.create_rectangle(1,2,7,40, fill=ACCENT, outline="")
+        self._scroll = tk.Frame(self._cvs, bg=BG)
+        self._win = self._cvs.create_window((0,0), window=self._scroll, anchor="nw")
+        self._cvs.bind("<Configure>", lambda e: self._cvs.itemconfig(self._win, width=e.width))
+        self._scroll.bind("<Configure>", lambda e: self._cvs.configure(scrollregion=self._cvs.bbox("all")))
+        def _yscroll(first, last):
+            try:
+                f,l = float(first), float(last)
+                h = self._sbc.winfo_height()
+                if h < 4: return
+                y0 = max(2, int(f*h)); y1 = min(h-2, int(l*h))
+                if y1-y0 < 20: y1 = y0+20
+                self._sbc.coords(self._sth,1,y0,7,y1)
+                self._sbc.configure(width=0 if (f<=0.0 and l>=1.0) else 9)
+            except: pass
+        self._cvs.configure(yscrollcommand=_yscroll)
+        self._sy = 0.0; self._sa = False
+        def _wheel(e):
+            total = self._scroll.winfo_reqheight()
+            vh = self._cvs.winfo_height()
+            if total <= vh: return
+            self._sy = max(0.0, min(1.0, self._sy - (e.delta/120)*60/max(total,1)))
+            if not self._sa: self._smooth_scroll()
+        self._cvs.bind_all("<MouseWheel>", _wheel)
 
         self._build_header(self._scroll)
         self._build_section_yt(self._scroll)
@@ -110,7 +145,7 @@ class App(ctk.CTk):
         self._settings_win = None
 
     def _card(self, parent, **kw):
-        return ctk.CTkFrame(parent, fg_color=CARD, corner_radius=12,
+        return ctk.CTkFrame(parent, fg_color=CARD, corner_radius=10,
                             border_width=1, border_color=BORDER, **kw)
 
     def _label(self, parent, text, size=10, bold=False, color=TEXT2, **kw):
@@ -137,8 +172,13 @@ class App(ctk.CTk):
 
     def _btn(self, parent, text, cmd, color=ACCENT, hover=ACCENT_H,
              text_color=TEXT, width=None, height=38, font_size=10):
+        def _animated_cmd(b=None, c=color, h=hover, fn=cmd):
+            if b:
+                b.configure(fg_color=h)
+                b.after(80, lambda: b.configure(fg_color=c))
+            fn()
         kw = dict(
-            text=text, command=cmd,
+            text=text,
             fg_color=color, hover_color=hover,
             text_color=text_color,
             font=("Segoe UI", font_size, "bold"),
@@ -146,7 +186,9 @@ class App(ctk.CTk):
             height=height,
         )
         if width: kw["width"] = width
-        return ctk.CTkButton(parent, **kw)
+        b = ctk.CTkButton(parent, **kw)
+        b.configure(command=lambda b=b: _animated_cmd(b))
+        return b
 
     def _sec_header(self, parent, title, subtitle, accent=ACCENT):
         hdr = ctk.CTkFrame(parent, fg_color=CARD2, corner_radius=0)
@@ -272,9 +314,13 @@ class App(ctk.CTk):
 
     # ── Download Button ───────────────────────────────────────────────────────
     def _build_download_btn(self, p):
+        def _dl_click():
+            self.dl_btn.configure(fg_color=ACCENT_D)
+            self.after(100, lambda: self.dl_btn.configure(fg_color=ACCENT))
+            self._start_dl()
         self.dl_btn = ctk.CTkButton(
             p, text="  ↓   MP3 herunterladen",
-            command=self._start_dl,
+            command=_dl_click,
             fg_color=ACCENT, hover_color=ACCENT_H,
             text_color=TEXT,
             font=("Segoe UI Black", 15),
