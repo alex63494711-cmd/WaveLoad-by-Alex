@@ -349,7 +349,7 @@ class App(ctk.CTk):
 
         # Settings overlay – hidden, full size, clipped by parent
         self._spanel = tk.Frame(self, bg=CARD2,
-                                highlightthickness=1, highlightbackground=ACCENT)
+                                highlightthickness=2, highlightbackground=ACCENT)
         # Don't place it yet
 
     # ── Reusable widgets ──────────────────────────────────────────────────────
@@ -517,93 +517,49 @@ class App(ctk.CTk):
         self._build_settings_content()
         self._spanel_visible = True
         self._spanel_animating = True
-        H = 400
-        # Start above the window
-        self._spanel.place(relx=0, y=-H, relwidth=1, height=H)
+        W, H = 480, 330
+        # place offscreen above, centered horizontally
+        self._spanel.place(relx=0.5, anchor="n", y=-H, width=W, height=H)
         self._spanel.lift()
-        self._anim_open(0)
+        self._anim_open(0, W, H)
 
-    def _anim_open(self, f):
-        H = 400
-        total = 20
+    def _anim_open(self, f, W, H):
+        total = 22
+        self.update_idletasks()
+        wh = self.winfo_height()
+        target_y = (wh - H) // 2
         if f >= total:
-            self._spanel.place(relx=0, y=0, relwidth=1, height=H)
+            self._spanel.place(relx=0.5, anchor="n", y=target_y, width=W, height=H)
             self._spanel_animating = False
             return
         t = f / total
-        # ease out back: kleine bounce am ende
-        c1, c3 = 1.2, 2.2
-        e = 1 + c3*(t-1)**3 + c1*(t-1)**2
-        y = int(-H + H * max(0.0, e))
-        self._spanel.place(relx=0, y=y, relwidth=1, height=H)
-        self.after(12, lambda: self._anim_open(f+1))
-        self.after(13, lambda: self._anim_open(f+1, W, H))
+        c1, c3 = 1.3, 2.3
+        e = max(0.0, 1 + c3*(t-1)**3 + c1*(t-1)**2)
+        y = int(-H + (target_y + H) * e)
+        self._spanel.place(relx=0.5, anchor="n", y=y, width=W, height=H)
+        self.after(12, lambda: self._anim_open(f+1, W, H))
 
     def _close_settings(self):
         if self._spanel_animating: return
         self._spanel_animating = True
-        self._anim_close(0, 480, 400)
+        W, H = 480, 330
+        self.update_idletasks()
+        wh = self.winfo_height()
+        start_y = (wh - H) // 2
+        self._anim_close(0, W, H, start_y)
 
-    def _anim_close(self, f, W, H):
+    def _anim_close(self, f, W, H, start_y):
         total = 14
-        if f > total:
+        if f >= total:
             self._spanel.place_forget()
             self._spanel_visible = False
             self._spanel_animating = False
             return
         t = f / total
-        e = max(0.01, 1.0 - t**2)
-        self._spanel.place(relx=0.5, rely=0.5, anchor="center",
-                           width=int(W*e), height=int(H*e))
-        self.after(13, lambda: self._anim_close(f+1, W, H))
-
-    def _build_settings_content(self):
-        p = self._spanel
-        # Header
-        hdr = tk.Frame(p, bg=CARD, height=52); hdr.pack(fill="x")
-        hdr.pack_propagate(False)
-        tk.Label(hdr, text="⚙  Einstellungen", fg=TEXT, bg=CARD,
-                 font=("Segoe UI",12,"bold")).place(x=20, rely=0.5, anchor="w")
-        cb = tk.Button(hdr, text="✕", command=self._close_settings,
-                       bg=CARD, fg=TEXT2, activebackground=RED, activeforeground=TEXT,
-                       font=("Segoe UI",12,"bold"), relief="flat", bd=0, cursor="hand2",
-                       width=3)
-        cb.place(relx=1.0, x=-10, rely=0.5, anchor="e")
-        tk.Frame(p, bg=ACCENT, height=1).pack(fill="x")
-
-        body = tk.Frame(p, bg=CARD2); body.pack(fill="both", expand=True, padx=24, pady=16)
-
-        # Ordner
-        tk.Label(body, text="Speicherordner", fg=TEXT, bg=CARD2,
-                 font=("Segoe UI",10,"bold")).pack(anchor="w")
-        fr = tk.Frame(body, bg=CARD2); fr.pack(fill="x", pady=(6,16))
-        tk.Label(fr, textvariable=self.output_dir, fg=TEXT2, bg=CARD3,
-                 font=("Segoe UI",9), anchor="w", padx=10, pady=9
-                 ).pack(side="left", fill="x", expand=True)
-        self._btn(fr, "Auswählen", self._browse, width=110
-                  ).pack(side="left", padx=(10,0))
-
-        # Qualität
-        tk.Label(body, text="Audioqualität", fg=TEXT, bg=CARD2,
-                 font=("Segoe UI",10,"bold")).pack(anchor="w")
-        qr = tk.Frame(body, bg=CARD2); qr.pack(fill="x", pady=(6,16))
-        self.q_seg = ctk.CTkSegmentedButton(
-            qr, values=["320 kbps","192 kbps","128 kbps"],
-            fg_color=CARD3, selected_color=ACCENT, selected_hover_color=ACCENT_H,
-            unselected_color=CARD3, unselected_hover_color=CARD2,
-            text_color=TEXT, font=("Segoe UI",10), corner_radius=8,
-            command=self._q_changed)
-        self.q_seg.pack(fill="x")
-        self.q_seg.set("320 kbps")
-
-        # Nach Download
-        tk.Label(body, text="Nach Download", fg=TEXT, bg=CARD2,
-                 font=("Segoe UI",10,"bold")).pack(anchor="w")
-        ctk.CTkCheckBox(body, text="  Dateimanager öffnen mit Datei markiert",
-                        variable=self.open_folder, fg_color=ACCENT,
-                        hover_color=ACCENT_H, text_color=TEXT2,
-                        font=("Segoe UI",10), corner_radius=4,
-                        ).pack(anchor="w", pady=(8,0))
+        e = 1.0 - t**2
+        y = int(-H + (start_y + H) * e)
+        self._spanel.place(relx=0.5, anchor="n", y=y, width=W, height=H)
+        self.after(12, lambda: self._anim_close(f+1, W, H, start_y))
 
     def _q_changed(self, val):
         self.quality_var.set({"320 kbps":"0","192 kbps":"5","128 kbps":"9"}.get(val,"0"))
