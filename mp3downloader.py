@@ -155,7 +155,7 @@ class App(ctk.CTk):
         bar.pack(side="left", fill="y", padx=(0,0))
         bar.pack_propagate(False)
         ctk.CTkLabel(hdr, text=f" {icon} ", text_color=accent,
-                     font=("Segoe UI", 14)).pack(side="left", pady=12)
+                     font=("Segoe UI", 14)).pack(side="left", pady=8)
         ctk.CTkLabel(hdr, text=title, text_color=TEXT,
                      font=("Segoe UI", 11, "bold")).pack(side="left")
         ctk.CTkLabel(hdr, text=f"  {subtitle}", text_color=TEXT3,
@@ -200,10 +200,10 @@ class App(ctk.CTk):
     def _build_section_yt(self, p):
         card = self._card(p)
         card.pack(fill="x", padx=20, pady=(0,10))
-        self._sec_header(card, "🔗", "YouTube / SoundCloud",
+        self._sec_header(card, "", "YouTube / SoundCloud",
                          "Link einfügen oder Strg+V", ACCENT)
         row = ctk.CTkFrame(card, fg_color="transparent")
-        row.pack(fill="x", padx=16, pady=(12,14))
+        row.pack(fill="x", padx=16, pady=(8,10))
         self._entry(row, var=self.url_var,
                     placeholder="https://youtube.com/...").pack(side="left", fill="x",
                                                                 expand=True, padx=(0,10))
@@ -215,10 +215,10 @@ class App(ctk.CTk):
     def _build_section_search(self, p):
         card = self._card(p)
         card.pack(fill="x", padx=20, pady=(0,10))
-        self._sec_header(card, "🔍", "Song suchen",
+        self._sec_header(card, "", "Song suchen",
                          "Name + Künstler direkt laden", ACCENT_H)
         body = ctk.CTkFrame(card, fg_color="transparent")
-        body.pack(fill="x", padx=16, pady=(12,14))
+        body.pack(fill="x", padx=16, pady=(8,10))
 
         r1 = ctk.CTkFrame(body, fg_color="transparent")
         r1.pack(fill="x", pady=(0,8))
@@ -239,10 +239,10 @@ class App(ctk.CTk):
     def _build_section_spotify(self, p):
         card = self._card(p)
         card.pack(fill="x", padx=20, pady=(0,10))
-        self._sec_header(card, "♫", "Spotify",
+        self._sec_header(card, "", "Spotify",
                          "Link einfügen → YouTube-Suche", SPOTIFY)
         row = ctk.CTkFrame(card, fg_color="transparent")
-        row.pack(fill="x", padx=16, pady=(12,14))
+        row.pack(fill="x", padx=16, pady=(8,10))
         self.sp_entry = self._entry(row, placeholder="Spotify-Link hier einfügen...",
                                     accent=SPOTIFY)
         self.sp_entry.pack(side="left", fill="x", expand=True, padx=(0,10))
@@ -257,10 +257,10 @@ class App(ctk.CTk):
     def _build_section_tiktok(self, p):
         card = self._card(p)
         card.pack(fill="x", padx=20, pady=(0,10))
-        self._sec_header(card, "✦", "TikTok / Instagram",
+        self._sec_header(card, "", "TikTok / Instagram",
                          "Sound als MP3 herunterladen", TIKTOK)
         row = ctk.CTkFrame(card, fg_color="transparent")
-        row.pack(fill="x", padx=16, pady=(12,14))
+        row.pack(fill="x", padx=16, pady=(8,10))
         self.ti_entry = self._entry(row, placeholder="TikTok / Instagram Link...",
                                     accent=TIKTOK)
         self.ti_entry.pack(side="left", fill="x", expand=True, padx=(0,10))
