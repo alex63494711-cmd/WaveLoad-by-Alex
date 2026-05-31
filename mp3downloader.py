@@ -66,10 +66,11 @@ def get_icon_path():
 class LoginWindow(ctk.CTk):
     def __init__(self):
         super().__init__(fg_color=BG)
-        self.title("WaveLoad – Anmelden")
-        self.geometry("860x540")
+        self.title("WaveLoad")
+        self.geometry("440x560")
         self.resizable(False, False)
         self.logged_in = False
+        self._page = "login"
         self._build()
         ico = get_icon_path()
         if ico:
@@ -77,120 +78,132 @@ class LoginWindow(ctk.CTk):
             except: pass
 
     def _build(self):
-        # Left panel – Login
-        left = tk.Frame(self, bg=CARD, width=380)
-        left.pack(side="left", fill="y")
-        left.pack_propagate(False)
-
-        # Right panel – Register
-        right = tk.Frame(self, bg=CARD2, width=380)
-        right.pack(side="left", fill="y", expand=True)
-
-        # Divider
-        tk.Frame(self, bg=ACCENT, width=2).place(relx=0.5, rely=0, relheight=1, anchor="n")
-
-        # ── LEFT: Login ──────────────────────────────────────────────────────
-        lc = tk.Frame(left, bg=CARD); lc.place(relx=.5, rely=.5, anchor="center", width=300)
-
-        box = tk.Frame(lc, bg=ACCENT_D, width=48, height=48)
-        box.pack_propagate(False); box.pack(anchor="center")
+        # Logo oben
+        top = tk.Frame(self, bg=BG); top.pack(pady=(32,0))
+        box = tk.Frame(top, bg=ACCENT_D, width=50, height=50)
+        box.pack_propagate(False); box.pack()
         tk.Label(box, text="♪", font=("Segoe UI",22,"bold"),
                  bg=ACCENT_D, fg=TEXT).place(relx=.5,rely=.5,anchor="center")
+        tk.Label(self, text="WaveLoad", font=("Segoe UI Black",20,"bold"),
+                 bg=BG, fg=TEXT).pack(pady=(10,0))
 
-        tk.Label(lc, text="Anmelden", font=("Segoe UI Black",18,"bold"),
-                 bg=CARD, fg=TEXT).pack(pady=(12,2))
-        tk.Label(lc, text="Willkommen zurück", font=("Segoe UI",9),
-                 bg=CARD, fg=TEXT3).pack(pady=(0,20))
+        # Tab-Leiste
+        tabs = tk.Frame(self, bg=CARD2, highlightthickness=1,
+                        highlightbackground=BORDER)
+        tabs.pack(fill="x", padx=40, pady=(16,0))
+        self._tab_login = tk.Label(tabs, text="  Anmelden  ",
+                                   font=("Segoe UI",10,"bold"), cursor="hand2",
+                                   bg=ACCENT, fg=TEXT, pady=10)
+        self._tab_login.pack(side="left", fill="x", expand=True)
+        self._tab_reg = tk.Label(tabs, text="  Registrieren  ",
+                                 font=("Segoe UI",10,"bold"), cursor="hand2",
+                                 bg=CARD2, fg=TEXT3, pady=10)
+        self._tab_reg.pack(side="left", fill="x", expand=True)
+        self._tab_login.bind("<Button-1>", lambda e: self._show("login"))
+        self._tab_reg.bind("<Button-1>",   lambda e: self._show("register"))
 
-        tk.Label(lc, text="Benutzername", font=("Segoe UI",9,"bold"),
+        # Card
+        self._card_frame = tk.Frame(self, bg=CARD, highlightthickness=1,
+                                    highlightbackground=BORDER)
+        self._card_frame.pack(fill="x", padx=40, pady=(0,0))
+
+        # Panels
+        self._login_panel  = tk.Frame(self._card_frame, bg=CARD)
+        self._reg_panel    = tk.Frame(self._card_frame, bg=CARD)
+
+        self._build_login(self._login_panel)
+        self._build_reg(self._reg_panel)
+
+        # Admin
+        adm = tk.Frame(self, bg=BG); adm.pack(pady=(14,0), padx=40, fill="x")
+        tk.Frame(adm, bg=BORDER, height=1).pack(fill="x", pady=(0,10))
+        adm_row = tk.Frame(adm, bg=BG); adm_row.pack(fill="x")
+        tk.Label(adm_row, text="Admin:", font=("Segoe UI",9),
+                 bg=BG, fg=TEXT3).pack(side="left", padx=(0,8))
+        self._adm_e = ctk.CTkEntry(adm_row, placeholder_text="Admin-Code",
+                                   fg_color=CARD3, border_color=BORDER,
+                                   text_color=TEXT, placeholder_text_color=TEXT3,
+                                   font=("Segoe UI",9), height=34, corner_radius=8,
+                                   show="●")
+        self._adm_e.pack(side="left", fill="x", expand=True, padx=(0,8))
+        ctk.CTkButton(adm_row, text="→", command=self._admin_login,
+                      fg_color=CARD3, hover_color=ACCENT_D,
+                      text_color=TEXT2, height=34, width=40,
+                      font=("Segoe UI",11,"bold"), corner_radius=8
+                      ).pack(side="left")
+        self._adm_e.bind("<Return>", lambda e: self._admin_login())
+
+        self._show("login")
+
+    def _build_login(self, p):
+        inner = tk.Frame(p, bg=CARD); inner.pack(fill="x", padx=24, pady=20)
+        self._err = tk.Label(inner, text="", font=("Segoe UI",9),
+                             bg=CARD, fg=RED, anchor="w", wraplength=340)
+        tk.Label(inner, text="Benutzername", font=("Segoe UI",9,"bold"),
                  bg=CARD, fg=TEXT2, anchor="w").pack(fill="x")
-        self._user_e = ctk.CTkEntry(lc, placeholder_text="Dein Benutzername",
+        self._user_e = ctk.CTkEntry(inner, placeholder_text="Dein Benutzername",
                                     fg_color=CARD3, border_color=BORDER,
                                     text_color=TEXT, placeholder_text_color=TEXT3,
                                     font=("Segoe UI",10), height=40, corner_radius=8)
         self._user_e.pack(fill="x", pady=(4,12))
-
-        tk.Label(lc, text="Passwort", font=("Segoe UI",9,"bold"),
+        tk.Label(inner, text="Passwort", font=("Segoe UI",9,"bold"),
                  bg=CARD, fg=TEXT2, anchor="w").pack(fill="x")
-        self._pass_e = ctk.CTkEntry(lc, placeholder_text="Dein Passwort",
+        self._pass_e = ctk.CTkEntry(inner, placeholder_text="Dein Passwort",
                                     fg_color=CARD3, border_color=BORDER,
                                     text_color=TEXT, placeholder_text_color=TEXT3,
-                                    font=("Segoe UI",10), height=40, corner_radius=8,
-                                    show="●")
-        self._pass_e.pack(fill="x", pady=(4,6))
-
-        self._err = tk.Label(lc, text="", font=("Segoe UI",9),
-                             bg=CARD, fg=RED, anchor="w", wraplength=280)
-        self._err.pack(fill="x", pady=(0,10))
-
-        ctk.CTkButton(lc, text="Anmelden", command=self._login,
+                                    font=("Segoe UI",10), height=40, corner_radius=8, show="●")
+        self._pass_e.pack(fill="x", pady=(4,8))
+        self._err.pack(fill="x", pady=(0,8))
+        ctk.CTkButton(inner, text="Anmelden", command=self._login,
                       fg_color=ACCENT, hover_color=ACCENT_H, text_color=TEXT,
                       font=("Segoe UI",11,"bold"), height=44, corner_radius=8
                       ).pack(fill="x")
+        self._pass_e.bind("<Return>", lambda e: self._login())
 
-        # Admin button
-        tk.Frame(lc, bg=BORDER, height=1).pack(fill="x", pady=(20,14))
-        tk.Label(lc, text="Admin-Zugang", font=("Segoe UI",9,"bold"),
-                 bg=CARD, fg=TEXT3, anchor="w").pack(fill="x")
-        adm_row = tk.Frame(lc, bg=CARD); adm_row.pack(fill="x", pady=(6,0))
-        self._adm_e = ctk.CTkEntry(adm_row, placeholder_text="Admin-Code",
-                                   fg_color=CARD3, border_color=BORDER,
-                                   text_color=TEXT, placeholder_text_color=TEXT3,
-                                   font=("Segoe UI",9), height=36, corner_radius=8,
-                                   show="●")
-        self._adm_e.pack(side="left", fill="x", expand=True, padx=(0,8))
-        ctk.CTkButton(adm_row, text="→ Admin", command=self._admin_login,
-                      fg_color=CARD3, hover_color=ACCENT_D,
-                      text_color=TEXT2, height=36, width=90,
-                      font=("Segoe UI",9,"bold"), corner_radius=8
-                      ).pack(side="left")
-
-        # ── RIGHT: Register ──────────────────────────────────────────────────
-        rc = tk.Frame(right, bg=CARD2); rc.place(relx=.5, rely=.5, anchor="center", width=300)
-
-        tk.Label(rc, text="Registrieren", font=("Segoe UI Black",18,"bold"),
-                 bg=CARD2, fg=TEXT).pack(pady=(0,2))
-        tk.Label(rc, text="Erstelle dein WaveLoad-Konto", font=("Segoe UI",9),
-                 bg=CARD2, fg=TEXT3).pack(pady=(0,20))
-
-        tk.Label(rc, text="Benutzername", font=("Segoe UI",9,"bold"),
-                 bg=CARD2, fg=TEXT2, anchor="w").pack(fill="x")
-        self._reg_user = ctk.CTkEntry(rc, placeholder_text="Gewünschter Benutzername",
+    def _build_reg(self, p):
+        inner = tk.Frame(p, bg=CARD); inner.pack(fill="x", padx=24, pady=20)
+        self._reg_err = tk.Label(inner, text="", font=("Segoe UI",9),
+                                 bg=CARD, fg=RED, anchor="w", wraplength=340)
+        tk.Label(inner, text="Benutzername", font=("Segoe UI",9,"bold"),
+                 bg=CARD, fg=TEXT2, anchor="w").pack(fill="x")
+        self._reg_user = ctk.CTkEntry(inner, placeholder_text="Gewünschter Benutzername",
                                       fg_color=CARD3, border_color=BORDER,
                                       text_color=TEXT, placeholder_text_color=TEXT3,
                                       font=("Segoe UI",10), height=40, corner_radius=8)
         self._reg_user.pack(fill="x", pady=(4,12))
-
-        tk.Label(rc, text="Passwort", font=("Segoe UI",9,"bold"),
-                 bg=CARD2, fg=TEXT2, anchor="w").pack(fill="x")
-        self._reg_pass = ctk.CTkEntry(rc, placeholder_text="Mind. 6 Zeichen",
+        tk.Label(inner, text="Passwort", font=("Segoe UI",9,"bold"),
+                 bg=CARD, fg=TEXT2, anchor="w").pack(fill="x")
+        self._reg_pass = ctk.CTkEntry(inner, placeholder_text="Mind. 6 Zeichen",
                                       fg_color=CARD3, border_color=BORDER,
                                       text_color=TEXT, placeholder_text_color=TEXT3,
-                                      font=("Segoe UI",10), height=40, corner_radius=8,
-                                      show="●")
+                                      font=("Segoe UI",10), height=40, corner_radius=8, show="●")
         self._reg_pass.pack(fill="x", pady=(4,12))
-
-        tk.Label(rc, text="Passwort bestätigen", font=("Segoe UI",9,"bold"),
-                 bg=CARD2, fg=TEXT2, anchor="w").pack(fill="x")
-        self._reg_pass2 = ctk.CTkEntry(rc, placeholder_text="Passwort wiederholen",
+        tk.Label(inner, text="Passwort bestätigen", font=("Segoe UI",9,"bold"),
+                 bg=CARD, fg=TEXT2, anchor="w").pack(fill="x")
+        self._reg_pass2 = ctk.CTkEntry(inner, placeholder_text="Passwort wiederholen",
                                        fg_color=CARD3, border_color=BORDER,
                                        text_color=TEXT, placeholder_text_color=TEXT3,
-                                       font=("Segoe UI",10), height=40, corner_radius=8,
-                                       show="●")
-        self._reg_pass2.pack(fill="x", pady=(4,6))
-
-        self._reg_err = tk.Label(rc, text="", font=("Segoe UI",9),
-                                 bg=CARD2, fg=RED, anchor="w", wraplength=280)
-        self._reg_err.pack(fill="x", pady=(0,10))
-
-        ctk.CTkButton(rc, text="Konto erstellen", command=self._do_register,
+                                       font=("Segoe UI",10), height=40, corner_radius=8, show="●")
+        self._reg_pass2.pack(fill="x", pady=(4,8))
+        self._reg_err.pack(fill="x", pady=(0,8))
+        ctk.CTkButton(inner, text="Konto erstellen →", command=self._do_register,
                       fg_color=GREEN, hover_color=GREEN_L, text_color="#000",
                       font=("Segoe UI",11,"bold"), height=44, corner_radius=8
                       ).pack(fill="x")
-
-        self._pass_e.bind("<Return>",   lambda e: self._login())
-        self._adm_e.bind("<Return>",    lambda e: self._admin_login())
         self._reg_pass2.bind("<Return>", lambda ev: self._do_register())
+
+    def _show(self, page):
+        self._page = page
+        if page == "login":
+            self._reg_panel.pack_forget()
+            self._login_panel.pack(fill="x")
+            self._tab_login.configure(bg=ACCENT, fg=TEXT)
+            self._tab_reg.configure(bg=CARD2, fg=TEXT3)
+        else:
+            self._login_panel.pack_forget()
+            self._reg_panel.pack(fill="x")
+            self._tab_login.configure(bg=CARD2, fg=TEXT3)
+            self._tab_reg.configure(bg=ACCENT, fg=TEXT)
 
     def _login(self):
         u = self._user_e.get().strip()
@@ -500,31 +513,30 @@ class App(ctk.CTk):
     # ── Settings Panel ────────────────────────────────────────────────────────
     def _open_settings(self):
         if self._spanel_visible or self._spanel_animating: return
-        # Rebuild content fresh
         for w in self._spanel.winfo_children(): w.destroy()
         self._build_settings_content()
         self._spanel_visible = True
         self._spanel_animating = True
-        W, H = 480, 400
-        # Show at full size but transparent via overlay trick:
-        # Place at full size, hidden underneath a same-color cover, then animate the cover away
-        self._spanel.place(relx=0.5, rely=0.5, anchor="center", width=W, height=H)
+        H = 400
+        # Start above the window
+        self._spanel.place(relx=0, y=-H, relwidth=1, height=H)
         self._spanel.lift()
-        # Animate scale from 0.7 with opacity trick using shrink of a cover frame
-        self._anim_open(0, W, H)
+        self._anim_open(0)
 
-    def _anim_open(self, f, W, H):
-        total = 22
-        if f > total:
+    def _anim_open(self, f):
+        H = 400
+        total = 20
+        if f >= total:
+            self._spanel.place(relx=0, y=0, relwidth=1, height=H)
             self._spanel_animating = False
             return
         t = f / total
-        # ease out back bounce
-        c1, c3 = 1.70158, 2.70158
+        # ease out back: kleine bounce am ende
+        c1, c3 = 1.2, 2.2
         e = 1 + c3*(t-1)**3 + c1*(t-1)**2
-        e = max(0.01, e)
-        self._spanel.place(relx=0.5, rely=0.5, anchor="center",
-                           width=int(W*e), height=int(H*e))
+        y = int(-H + H * max(0.0, e))
+        self._spanel.place(relx=0, y=y, relwidth=1, height=H)
+        self.after(12, lambda: self._anim_open(f+1))
         self.after(13, lambda: self._anim_open(f+1, W, H))
 
     def _close_settings(self):
