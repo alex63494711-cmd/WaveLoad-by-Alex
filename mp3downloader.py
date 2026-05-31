@@ -146,7 +146,8 @@ class App(ctk.CTk):
 
     def _card(self, parent, **kw):
         return ctk.CTkFrame(parent, fg_color=CARD, corner_radius=10,
-                            border_width=1, border_color=BORDER, **kw)
+                            border_width=1, border_color=BORDER,
+                            background_corner_colors=None, **kw)
 
     def _label(self, parent, text, size=10, bold=False, color=TEXT2, **kw):
         weight = "bold" if bold else "normal"
@@ -191,18 +192,15 @@ class App(ctk.CTk):
         return b
 
     def _sec_header(self, parent, title, subtitle, accent=ACCENT):
-        hdr = ctk.CTkFrame(parent, fg_color=CARD2, corner_radius=0)
+        import tkinter as tk
+        hdr = tk.Frame(parent, bg=CARD2)
         hdr.pack(fill="x")
-        # left accent bar
-        bar = ctk.CTkFrame(hdr, fg_color=accent, width=4, corner_radius=0)
-        bar.pack(side="left", fill="y", padx=(0,0))
-        bar.pack_propagate(False)
-        ctk.CTkLabel(hdr, text=f" {title}", text_color=TEXT,
-                     font=("Segoe UI", 11, "bold")).pack(side="left", pady=8, padx=(10,0))
-        ctk.CTkLabel(hdr, text=f"  {subtitle}", text_color=TEXT3,
-                     font=("Segoe UI", 9)).pack(side="left")
-        # separator
-        ctk.CTkFrame(parent, fg_color=BORDER, height=1, corner_radius=0).pack(fill="x")
+        tk.Frame(hdr, bg=accent, width=4).pack(side="left", fill="y")
+        tk.Label(hdr, text=title, fg=TEXT, bg=CARD2,
+                 font=("Segoe UI", 11, "bold")).pack(side="left", pady=8, padx=(10,4))
+        tk.Label(hdr, text=subtitle, fg=TEXT3, bg=CARD2,
+                 font=("Segoe UI", 9)).pack(side="left")
+        tk.Frame(parent, bg=BORDER, height=1).pack(fill="x")
 
     # ── Header ────────────────────────────────────────────────────────────────
     def _build_header(self, p):
@@ -240,10 +238,11 @@ class App(ctk.CTk):
     # ── YouTube / SoundCloud ──────────────────────────────────────────────────
     def _build_section_yt(self, p):
         card = self._card(p)
-        card.pack(fill="x", padx=20, pady=(0,10))
+        card.pack(fill="x", padx=20, pady=(0,8))
         self._sec_header(card, "YouTube / SoundCloud",
                          "Link einfügen oder Strg+V", ACCENT)
-        row = ctk.CTkFrame(card, fg_color="transparent")
+        import tkinter as _tk
+        row = _tk.Frame(card, bg=CARD)
         row.pack(fill="x", padx=16, pady=(8,10))
         self._entry(row, var=self.url_var,
                     placeholder="https://youtube.com/...").pack(side="left", fill="x",
@@ -255,20 +254,22 @@ class App(ctk.CTk):
     # ── Song suchen ───────────────────────────────────────────────────────────
     def _build_section_search(self, p):
         card = self._card(p)
-        card.pack(fill="x", padx=20, pady=(0,10))
+        card.pack(fill="x", padx=20, pady=(0,8))
         self._sec_header(card, "Song suchen",
                          "Name + Künstler direkt laden", ACCENT_H)
-        body = ctk.CTkFrame(card, fg_color="transparent")
+        import tkinter as _tk
+        body = _tk.Frame(card, bg=CARD)
         body.pack(fill="x", padx=16, pady=(8,10))
 
-        r1 = ctk.CTkFrame(body, fg_color="transparent")
+        import tkinter as _tk
+        r1 = _tk.Frame(body, bg=CARD)
         r1.pack(fill="x", pady=(0,8))
         ctk.CTkLabel(r1, text="Song", text_color=TEXT3,
                      font=("Segoe UI", 9), width=60).pack(side="left")
         self.search_entry = self._entry(r1, placeholder="Songname...")
         self.search_entry.pack(side="left", fill="x", expand=True)
 
-        r2 = ctk.CTkFrame(body, fg_color="transparent")
+        r2 = _tk.Frame(body, bg=CARD)
         r2.pack(fill="x")
         ctk.CTkLabel(r2, text="Künstler", text_color=TEXT3,
                      font=("Segoe UI", 9), width=60).pack(side="left")
@@ -279,10 +280,11 @@ class App(ctk.CTk):
     # ── Spotify ───────────────────────────────────────────────────────────────
     def _build_section_spotify(self, p):
         card = self._card(p)
-        card.pack(fill="x", padx=20, pady=(0,10))
+        card.pack(fill="x", padx=20, pady=(0,8))
         self._sec_header(card, "Spotify",
                          "Link einfügen → YouTube-Suche", SPOTIFY)
-        row = ctk.CTkFrame(card, fg_color="transparent")
+        import tkinter as _tk
+        row = _tk.Frame(card, bg=CARD)
         row.pack(fill="x", padx=16, pady=(8,10))
         self.sp_entry = self._entry(row, placeholder="Spotify-Link hier einfügen...",
                                     accent=SPOTIFY)
@@ -297,10 +299,11 @@ class App(ctk.CTk):
     # ── TikTok / Instagram ────────────────────────────────────────────────────
     def _build_section_tiktok(self, p):
         card = self._card(p)
-        card.pack(fill="x", padx=20, pady=(0,10))
+        card.pack(fill="x", padx=20, pady=(0,8))
         self._sec_header(card, "TikTok / Instagram",
                          "Sound als MP3 herunterladen", TIKTOK)
-        row = ctk.CTkFrame(card, fg_color="transparent")
+        import tkinter as _tk
+        row = _tk.Frame(card, bg=CARD)
         row.pack(fill="x", padx=16, pady=(8,10))
         self.ti_entry = self._entry(row, placeholder="TikTok / Instagram Link...",
                                     accent=TIKTOK)
