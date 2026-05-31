@@ -94,7 +94,8 @@ class App(ctk.CTk):
     def _build_ui(self):
         # Scrollable main frame
         self._scroll = ctk.CTkScrollableFrame(self, fg_color=BG, scrollbar_button_color=ACCENT,
-                                               scrollbar_button_hover_color=ACCENT_H)
+                                               scrollbar_button_hover_color=ACCENT_H,
+                                               corner_radius=0)
         self._scroll.pack(fill="both", expand=True, padx=0, pady=0)
 
         self._build_header(self._scroll)
@@ -147,17 +148,15 @@ class App(ctk.CTk):
         if width: kw["width"] = width
         return ctk.CTkButton(parent, **kw)
 
-    def _sec_header(self, parent, icon, title, subtitle, accent=ACCENT):
+    def _sec_header(self, parent, title, subtitle, accent=ACCENT):
         hdr = ctk.CTkFrame(parent, fg_color=CARD2, corner_radius=0)
         hdr.pack(fill="x")
         # left accent bar
         bar = ctk.CTkFrame(hdr, fg_color=accent, width=4, corner_radius=0)
         bar.pack(side="left", fill="y", padx=(0,0))
         bar.pack_propagate(False)
-        ctk.CTkLabel(hdr, text=f" {icon} ", text_color=accent,
-                     font=("Segoe UI", 14)).pack(side="left", pady=8)
-        ctk.CTkLabel(hdr, text=title, text_color=TEXT,
-                     font=("Segoe UI", 11, "bold")).pack(side="left")
+        ctk.CTkLabel(hdr, text=f" {title}", text_color=TEXT,
+                     font=("Segoe UI", 11, "bold")).pack(side="left", pady=8, padx=(10,0))
         ctk.CTkLabel(hdr, text=f"  {subtitle}", text_color=TEXT3,
                      font=("Segoe UI", 9)).pack(side="left")
         # separator
@@ -200,7 +199,7 @@ class App(ctk.CTk):
     def _build_section_yt(self, p):
         card = self._card(p)
         card.pack(fill="x", padx=20, pady=(0,10))
-        self._sec_header(card, "", "YouTube / SoundCloud",
+        self._sec_header(card, "YouTube / SoundCloud",
                          "Link einfügen oder Strg+V", ACCENT)
         row = ctk.CTkFrame(card, fg_color="transparent")
         row.pack(fill="x", padx=16, pady=(8,10))
@@ -215,7 +214,7 @@ class App(ctk.CTk):
     def _build_section_search(self, p):
         card = self._card(p)
         card.pack(fill="x", padx=20, pady=(0,10))
-        self._sec_header(card, "", "Song suchen",
+        self._sec_header(card, "Song suchen",
                          "Name + Künstler direkt laden", ACCENT_H)
         body = ctk.CTkFrame(card, fg_color="transparent")
         body.pack(fill="x", padx=16, pady=(8,10))
@@ -239,7 +238,7 @@ class App(ctk.CTk):
     def _build_section_spotify(self, p):
         card = self._card(p)
         card.pack(fill="x", padx=20, pady=(0,10))
-        self._sec_header(card, "", "Spotify",
+        self._sec_header(card, "Spotify",
                          "Link einfügen → YouTube-Suche", SPOTIFY)
         row = ctk.CTkFrame(card, fg_color="transparent")
         row.pack(fill="x", padx=16, pady=(8,10))
@@ -257,7 +256,7 @@ class App(ctk.CTk):
     def _build_section_tiktok(self, p):
         card = self._card(p)
         card.pack(fill="x", padx=20, pady=(0,10))
-        self._sec_header(card, "", "TikTok / Instagram",
+        self._sec_header(card, "TikTok / Instagram",
                          "Sound als MP3 herunterladen", TIKTOK)
         row = ctk.CTkFrame(card, fg_color="transparent")
         row.pack(fill="x", padx=16, pady=(8,10))
