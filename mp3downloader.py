@@ -147,7 +147,7 @@ class App(ctk.CTk):
         import tkinter as tk
         self._spanel = tk.Frame(self, bg=CARD2,
                                 highlightthickness=1, highlightbackground=ACCENT)
-        self._build_settings_panel(self._spanel)
+
 
     def _card(self, parent, **kw):
         return ctk.CTkFrame(parent, fg_color=CARD, corner_radius=10,
