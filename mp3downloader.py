@@ -183,14 +183,14 @@ class LoginWindow(ctk.CTk):
                                  bg=CARD2, fg=RED, anchor="w", wraplength=280)
         self._reg_err.pack(fill="x", pady=(0,10))
 
-        ctk.CTkButton(rc, text="Konto erstellen", command=self._register,
+        ctk.CTkButton(rc, text="Konto erstellen", command=self._do_register,
                       fg_color=GREEN, hover_color=GREEN_L, text_color="#000",
                       font=("Segoe UI",11,"bold"), height=44, corner_radius=8
                       ).pack(fill="x")
 
         self._pass_e.bind("<Return>",   lambda e: self._login())
         self._adm_e.bind("<Return>",    lambda e: self._admin_login())
-        self._reg_pass2.bind("<Return>", lambda ev: self._register())
+        self._reg_pass2.bind("<Return>", lambda ev: self._do_register())
 
     def _login(self):
         u = self._user_e.get().strip()
@@ -202,7 +202,7 @@ class LoginWindow(ctk.CTk):
             self._err.configure(text="Benutzername oder Passwort falsch."); return
         self.logged_in = True; self.destroy()
 
-    def _register(self):
+    def _do_register(self):
         u = self._reg_user.get().strip()
         p = self._reg_pass.get()
         p2 = self._reg_pass2.get()
