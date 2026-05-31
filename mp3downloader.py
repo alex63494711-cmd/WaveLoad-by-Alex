@@ -141,8 +141,13 @@ class App(ctk.CTk):
         self._build_download_btn(self._scroll)
         self._build_log(self._scroll)
 
-        # Settings overlay (toplevel)
+        # Settings panel (overlay)
         self._settings_win = None
+        self._spanel_visible = False
+        import tkinter as tk
+        self._spanel = tk.Frame(self, bg=CARD2,
+                                highlightthickness=1, highlightbackground=ACCENT)
+        self._build_settings_panel(self._spanel)
 
     def _card(self, parent, **kw):
         return ctk.CTkFrame(parent, fg_color=CARD, corner_radius=10,
@@ -378,50 +383,41 @@ class App(ctk.CTk):
         self.log_box.configure(state="disabled")
 
     # ── Settings Window ───────────────────────────────────────────────────────
-    def _open_settings(self):
-        if self._settings_win and self._settings_win.winfo_exists():
-            self._settings_win.focus(); return
-
-        win = ctk.CTkToplevel(self)
-        win.title("Einstellungen")
-        win.geometry("520x440")
-        win.resizable(False, False)
-        win.configure(fg_color=CARD2)
-        win.grab_set()
-        self._settings_win = win
-
+    def _build_settings_panel(self, p):
+        import tkinter as tk
         # Header
-        hdr = ctk.CTkFrame(win, fg_color=CARD, corner_radius=0)
+        hdr = tk.Frame(p, bg=CARD)
         hdr.pack(fill="x")
-        ctk.CTkLabel(hdr, text="⚙  Einstellungen", text_color=TEXT,
-                     font=("Segoe UI Black", 14)).pack(side="left", padx=24, pady=18)
-        self._btn(hdr, "✕", win.destroy,
-                  color=CARD3, hover=RED, text_color=TEXT2,
-                  width=36, height=32).pack(side="right", padx=16, pady=16)
+        tk.Label(hdr, text="⚙  Einstellungen", fg=TEXT, bg=CARD,
+                 font=("Segoe UI Black", 13)).pack(side="left", padx=20, pady=14)
+        close_btn = tk.Button(hdr, text="✕", command=self._close_settings,
+                              bg=CARD3, fg=TEXT2, activebackground=RED,
+                              activeforeground=TEXT, font=("Segoe UI", 11, "bold"),
+                              relief="flat", bd=0, cursor="hand2", padx=10, pady=6)
+        close_btn.pack(side="right", padx=12, pady=10)
+        tk.Frame(p, bg=ACCENT, height=1).pack(fill="x")
 
-        body = ctk.CTkFrame(win, fg_color="transparent")
-        body.pack(fill="both", expand=True, padx=24, pady=20)
+        body = tk.Frame(p, bg=CARD2)
+        body.pack(fill="both", expand=True, padx=22, pady=16)
 
         # Ordner
-        ctk.CTkLabel(body, text="📁  Speicherordner", text_color=TEXT,
-                     font=("Segoe UI", 11, "bold")).pack(anchor="w")
-        fr = ctk.CTkFrame(body, fg_color="transparent")
-        fr.pack(fill="x", pady=(8,20))
-        ctk.CTkLabel(fr, textvariable=self.output_dir,
-                     text_color=TEXT2, fg_color=CARD3,
-                     font=("Segoe UI", 9), corner_radius=8,
-                     anchor="w").pack(side="left", fill="x", expand=True,
-                                      ipady=10, ipadx=12)
+        tk.Label(body, text="Speicherordner", fg=TEXT, bg=CARD2,
+                 font=("Segoe UI", 10, "bold")).pack(anchor="w")
+        fr = tk.Frame(body, bg=CARD2)
+        fr.pack(fill="x", pady=(6,16))
+        tk.Label(fr, textvariable=self.output_dir, fg=TEXT2, bg=CARD3,
+                 font=("Segoe UI", 9), anchor="w",
+                 padx=10, pady=8).pack(side="left", fill="x", expand=True)
         self._btn(fr, "Auswählen", self._browse, width=110).pack(side="left", padx=(10,0))
 
         # Qualität
-        ctk.CTkLabel(body, text="🎚  Audioqualität", text_color=TEXT,
-                     font=("Segoe UI", 11, "bold")).pack(anchor="w")
-        qr = ctk.CTkFrame(body, fg_color="transparent")
-        qr.pack(fill="x", pady=(8,20))
+        tk.Label(body, text="Audioqualität", fg=TEXT, bg=CARD2,
+                 font=("Segoe UI", 10, "bold")).pack(anchor="w")
+        qr = tk.Frame(body, bg=CARD2)
+        qr.pack(fill="x", pady=(6,16))
         self.q_seg = ctk.CTkSegmentedButton(
             qr,
-            values=["320 kbps  Beste", "192 kbps  Gut", "128 kbps  Normal"],
+            values=["320 kbps", "192 kbps", "128 kbps"],
             fg_color=CARD3,
             selected_color=ACCENT,
             selected_hover_color=ACCENT_H,
@@ -433,11 +429,11 @@ class App(ctk.CTk):
             command=self._q_changed,
         )
         self.q_seg.pack(fill="x")
-        self.q_seg.set("320 kbps  Beste")
+        self.q_seg.set("320 kbps")
 
         # Nach Download
-        ctk.CTkLabel(body, text="📥  Nach Download", text_color=TEXT,
-                     font=("Segoe UI", 11, "bold")).pack(anchor="w")
+        tk.Label(body, text="Nach Download", fg=TEXT, bg=CARD2,
+                 font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(0,6))
         ctk.CTkCheckBox(body,
                         text="  Dateimanager öffnen mit Datei markiert",
                         variable=self.open_folder,
@@ -445,10 +441,47 @@ class App(ctk.CTk):
                         text_color=TEXT2,
                         font=("Segoe UI", 10),
                         corner_radius=4,
-                        ).pack(anchor="w", pady=(8,0))
+                        ).pack(anchor="w")
+
+    def _open_settings(self):
+        if hasattr(self, '_spanel_visible') and self._spanel_visible: return
+        self._spanel_visible = True
+        self._spanel.place(relx=0.5, rely=0.5, anchor="center", width=1, height=1)
+        self._spanel.lift()
+        self._anim_settings_open(0)
+
+    def _anim_settings_open(self, f):
+        W, H = 500, 420
+        total = 28
+        if f > total:
+            self._spanel.place(relx=0.5, rely=0.5, anchor="center", width=W, height=H)
+            return
+        t = f / total
+        # ease out back
+        c1 = 1.70158; c3 = c1 + 1
+        e = 1 + c3*((t-1)**3) + c1*((t-1)**2)
+        w = max(2, int(W * e)); h = max(2, int(H * e))
+        self._spanel.place(relx=0.5, rely=0.5, anchor="center", width=w, height=h)
+        self.after(14, lambda: self._anim_settings_open(f+1))
+
+    def _close_settings(self):
+        self._anim_settings_close(0)
+
+    def _anim_settings_close(self, f):
+        W, H = 500, 420
+        total = 18
+        if f > total:
+            self._spanel.place_forget()
+            self._spanel_visible = False
+            return
+        t = f / total
+        e = max(0.0, 1.0 - t*t*t)
+        w = max(2, int(W * e)); h = max(2, int(H * e))
+        self._spanel.place(relx=0.5, rely=0.5, anchor="center", width=w, height=h)
+        self.after(14, lambda: self._anim_settings_close(f+1))
 
     def _q_changed(self, val):
-        mapping = {"320 kbps  Beste": "0", "192 kbps  Gut": "5", "128 kbps  Normal": "9"}
+        mapping = {"320 kbps": "0", "192 kbps": "5", "128 kbps": "9"}
         self.quality_var.set(mapping.get(val, "0"))
 
     # ── Helpers ───────────────────────────────────────────────────────────────
