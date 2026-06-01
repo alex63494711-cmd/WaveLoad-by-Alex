@@ -887,13 +887,6 @@ class LoginWindow(QMainWindow):
         users[u] = _h(p); save_users(users)
         self.logged_in = True; self.close()
 
-    def _admin_login(self):
-        if self._adm_entry.text().strip() == ADMIN_CODE:
-            self.logged_in = True; self.close()
-        else:
-            self._err.setText("Ungültiger Admin-Code.")
-if (loginSuccess)
-{
     MainWindow main = new MainWindow();
     main.Show();
     this.Hide(); // oder Close()
