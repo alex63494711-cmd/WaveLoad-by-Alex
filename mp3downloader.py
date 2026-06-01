@@ -198,62 +198,66 @@ class Section(QWidget):
 class SettingsPanel(QWidget):
     def __init__(self, parent, app_ref):
         super().__init__(parent); self.app = app_ref
-        self.setObjectName("panel")
-        self.setFixedWidth(460)
+        self.setFixedWidth(480)
+        # Force solid background - no transparency
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setStyleSheet("SettingsPanel { background:#18181f; border-radius:14px; border:1px solid #2e2e4a; }")
         self._build(); self.hide()
         self._anim = QPropertyAnimation(self, b"pos")
 
     def _build(self):
-        l = QVBoxLayout(self); l.setContentsMargins(24,20,24,24); l.setSpacing(20)
+        l = QVBoxLayout(self); l.setContentsMargins(0,0,0,0); l.setSpacing(0)
 
-        # Header
-        hdr = QHBoxLayout()
-        hdr.addWidget(L("Einstellungen", 13, "#e0e0f0", True))
-        hdr.addStretch()
-        x = B("✕","danger",32,32); x.clicked.connect(self.slide_out)
-        hdr.addWidget(x); l.addLayout(hdr)
-        l.addWidget(sep())
+        # Header bar
+        hdr = QWidget()
+        hdr.setStyleSheet("background:#1e1e2e; border-top-left-radius:14px; border-top-right-radius:14px; border-bottom:1px solid #2e2e4a;")
+        hdr.setFixedHeight(54)
+        hl = QHBoxLayout(hdr); hl.setContentsMargins(22,0,16,0)
+        t = QLabel("Einstellungen"); t.setFont(QFont("Segoe UI",13,QFont.Weight.Bold))
+        t.setStyleSheet("color:#e0e0f0; background:transparent;")
+        hl.addWidget(t); hl.addStretch()
+        x = QPushButton("✕"); x.setFixedSize(32,32); x.setCursor(Qt.CursorShape.PointingHandCursor)
+        x.setStyleSheet("QPushButton{background:transparent;color:#666688;font-size:14pt;border-radius:6px;border:none;} QPushButton:hover{background:#ef4444;color:#fff;}")
+        x.clicked.connect(self.slide_out); hl.addWidget(x)
+        l.addWidget(hdr)
+
+        # Body
+        body = QWidget()
+        body.setStyleSheet("background:#18181f; border-bottom-left-radius:14px; border-bottom-right-radius:14px;")
+        bl = QVBoxLayout(body); bl.setContentsMargins(24,22,24,24); bl.setSpacing(20)
+        l.addWidget(body)
 
         # Ordner
-        l.addWidget(L("Speicherordner", 9, "#6b6b9a"))
+        lbl1 = QLabel("Speicherordner"); lbl1.setStyleSheet("color:#8888aa; font-size:9pt;"); bl.addWidget(lbl1)
         dr = QHBoxLayout(); dr.setSpacing(10)
-        self.dir_lbl = QLineEdit(); self.dir_lbl.setReadOnly(True)
-        self.dir_lbl.setFixedHeight(40); self.dir_lbl.setText(self.app._output_dir)
-        ab = B("···", h=40, w=44); ab.clicked.connect(self._browse)
-        dr.addWidget(self.dir_lbl, 1); dr.addWidget(ab); l.addLayout(dr)
+        self.dir_lbl = QLineEdit(); self.dir_lbl.setReadOnly(True); self.dir_lbl.setFixedHeight(42)
+        self.dir_lbl.setText(self.app._output_dir)
+        self.dir_lbl.setStyleSheet("background:#222235; border:1.5px solid #2e2e4a; border-radius:8px; color:#e0e0f0; padding:0 12px; font-size:10pt;")
+        ab = QPushButton("···"); ab.setFixedSize(44,42); ab.setCursor(Qt.CursorShape.PointingHandCursor)
+        ab.setStyleSheet("QPushButton{background:#222235;color:#e0e0f0;border:1.5px solid #2e2e4a;border-radius:8px;font-size:14pt;} QPushButton:hover{background:#2a2a42;}")
+        ab.clicked.connect(self._browse)
+        dr.addWidget(self.dir_lbl,1); dr.addWidget(ab); bl.addLayout(dr)
 
         # Qualität
-        l.addWidget(L("Audioqualität", 9, "#6b6b9a"))
+        lbl2 = QLabel("Audioqualität"); lbl2.setStyleSheet("color:#8888aa; font-size:9pt;"); bl.addWidget(lbl2)
         qr = QHBoxLayout(); qr.setSpacing(8); self._qg = QButtonGroup(self)
         for i,(t,v) in enumerate([("320 kbps","0"),("192 kbps","5"),("128 kbps","9")]):
-            b = QPushButton(t); b.setCheckable(True); b.setFixedHeight(40)
-            b.setCursor(Qt.CursorShape.PointingHandCursor)
-            b.setProperty("qval", v)
-            b.setStyleSheet("""
-                QPushButton { background:#222235; color:#6b6b9a; border-radius:8px;
-                              font-size:9pt; font-weight:bold; border:1.5px solid #2e2e4a; }
-                QPushButton:checked { background:#7c5cf6; color:#fff; border-color:#7c5cf6; }
-                QPushButton:hover   { background:#2a2a42; }
-            """)
-            self._qg.addButton(b, i); qr.addWidget(b)
-            if i == 0: b.setChecked(True)
+            b = QPushButton(t); b.setCheckable(True); b.setFixedHeight(42)
+            b.setCursor(Qt.CursorShape.PointingHandCursor); b.setProperty("qval",v)
+            b.setStyleSheet("QPushButton{background:#222235;color:#8888aa;border-radius:8px;font-size:9pt;font-weight:bold;border:1.5px solid #2e2e4a;} QPushButton:checked{background:#7c5cf6;color:#fff;border-color:#7c5cf6;} QPushButton:hover{background:#2a2a42;color:#e0e0f0;}")
+            self._qg.addButton(b,i); qr.addWidget(b)
+            if i==0: b.setChecked(True)
         self._qg.idToggled.connect(lambda i,c: c and setattr(self.app,'_quality',self._qg.button(i).property("qval")))
-        l.addLayout(qr)
+        bl.addLayout(qr)
 
         # Nach Download
-        l.addWidget(L("Nach Download", 9, "#6b6b9a"))
-        self._open_cb = QPushButton("Dateimanager nach Download öffnen")
+        lbl3 = QLabel("Nach Download"); lbl3.setStyleSheet("color:#8888aa; font-size:9pt;"); bl.addWidget(lbl3)
+        self._open_cb = QPushButton("  Dateimanager nach Download öffnen")
         self._open_cb.setCheckable(True); self._open_cb.setChecked(True)
-        self._open_cb.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._open_cb.setStyleSheet("""
-            QPushButton { background:#222235; color:#6b6b9a; border-radius:8px;
-                          font-size:9pt; text-align:left; padding:0 14px;
-                          border:1.5px solid #2e2e4a; height:40px; }
-            QPushButton:checked { background:#162a1e; color:#4ade80; border-color:#166534; }
-        """)
+        self._open_cb.setFixedHeight(42); self._open_cb.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._open_cb.setStyleSheet("QPushButton{background:#222235;color:#8888aa;border-radius:8px;font-size:9pt;text-align:left;padding:0 14px;border:1.5px solid #2e2e4a;} QPushButton:checked{background:#162a1e;color:#4ade80;border-color:#166534;}")
         self._open_cb.toggled.connect(lambda v: setattr(self.app,'_open_folder',v))
-        l.addWidget(self._open_cb)
-        l.addStretch()
+        bl.addWidget(self._open_cb)
         self.adjustSize()
 
     def _browse(self):
