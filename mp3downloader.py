@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
     QScrollArea, QStackedWidget, QButtonGroup, QFrame, QGraphicsDropShadowEffect
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QPropertyAnimation, QEasingCurve, QTimer, QPoint, QVariantAnimation
-from PyQt6.QtGui import QFont, QIcon, QPalette, QColor, QPainter, QPen
+from PyQt6.QtGui import QFont, QIcon, QPalette, QColor, QPainter, QPen, QPainterPath
 
 # ── Absolut sicherer SSL-Bypass für alle Threads und urllib-Funktionen ───────
 try:
@@ -101,10 +101,15 @@ class LoadingOverlay(QWidget):
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False) # Blockiert Klicks
         self.angle = 0
+        self.progress_text = "0%"
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._rotate)
         self.timer.start(16) # ~60 FPS für flüssige Animation
         self.hide()
+
+    def set_progress(self, pct):
+        self.progress_text = f"{pct}%"
+        self.update()
 
     def _rotate(self):
         self.angle = (self.angle + 4) % 360
@@ -132,19 +137,71 @@ class LoadingOverlay(QWidget):
         painter.setPen(pen)
         painter.drawArc(cx - size, cy - size - 20, size * 2, size * 2, -self.angle * 16, 80 * 16)
         
-        # Text unter dem Kreis zeichnen
+        # Prozent-Text exakt in die Mitte des Kreises platzieren
         painter.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
         painter.setPen(QColor(C_TEXT))
-        text = "Komponenten werden heruntergeladen..."
-        subtext = "Bitte warten, yt-dlp & ffmpeg werden eingerichtet."
+        tw_pct = painter.fontMetrics().horizontalAdvance(self.progress_text)
+        th_pct = painter.fontMetrics().height()
+        painter.drawText(cx - (tw_pct // 2), cy - 20 + (th_pct // 4), self.progress_text)
+        
+        # Status-Texte unter dem Kreis zeichnen
+        painter.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        text = "Komponenten werden eingerichtet..."
+        subtext = "Bitte warten, yt-dlp & ffmpeg werden geladen."
         
         tw = painter.fontMetrics().horizontalAdvance(text)
-        painter.drawText(cx - (tw // 2), cy + size + 20, text)
+        painter.drawText(cx - (tw // 2), cy + size + 25, text)
         
         painter.setFont(QFont("Segoe UI", 9))
         painter.setPen(QColor(C_MUTED))
         tsw = painter.fontMetrics().horizontalAdvance(subtext)
-        painter.drawText(cx - (tsw // 2), cy + size + 45, subtext)
+        painter.drawText(cx - (tsw // 2), cy + size + 50, subtext)
+
+
+# ── Vektor-Zahnrad Button Klasse ──────────────────────────────────────────────
+class GearButton(QPushButton):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(36, 36)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.hovered = False
+
+    def enterEvent(self, event):
+        self.hovered = True
+        self.update()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.hovered = False
+        self.update()
+        super().leaveEvent(event)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # Hintergrund zeichnen
+        bg_color = QColor("#2a2a3a") if self.hovered else QColor(C_RAISED)
+        painter.setBrush(bg_color)
+        painter.setPen(QPen(QColor(C_BORDER), 1))
+        painter.drawRoundedRect(self.rect(), 10, 10)
+        
+        # Zahnrad zeichnen
+        painter.translate(18, 18)
+        pen = QPen(QColor(C_TEXT if self.hovered else C_MUTED))
+        pen.setWidth(2)
+        painter.setPen(pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        
+        # Innerer Kreis
+        painter.drawEllipse(-4, -4, 8, 8)
+        # Äußerer Basis-Kreis
+        painter.drawEllipse(-8, -8, 16, 16)
+        
+        # 8 Zähne zeichnen
+        for _ in range(8):
+            painter.drawRect(-2, -11, 4, 3)
+            painter.rotate(45)
 
 
 # ── Animierter High-End Button ────────────────────────────────────────────────
@@ -215,17 +272,41 @@ class Worker(QThread):
         except Exception as e: self.log.emit(f"Fehler: {e}"); self.done.emit(False)
 
 class ToolsWorker(QThread):
-    log = pyqtSignal(str); done = pyqtSignal()
+    log = pyqtSignal(str); progress = pyqtSignal(int); done = pyqtSignal()
+    
+    def _download_with_progress(self, url, path, start_pct, end_pct):
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req) as response:
+            total_size = int(response.info().get('Content-Length', 0))
+            downloaded = 0
+            block_size = 1024 * 64
+            with open(path, 'wb') as f:
+                while True:
+                    chunk = response.read(block_size)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    if total_size > 0:
+                        pct = int(start_pct + (downloaded / total_size) * (end_pct - start_pct))
+                        self.progress.emit(min(pct, end_pct))
+        
     def run(self):
         os.makedirs(TOOLS_DIR, exist_ok=True)
         try:
+            # Wenn beides fehlt: yt-dlp nimmt 0-20% ein, ffmpeg 20-100%
             if not os.path.exists(YTDLP_PATH):
                 self.log.emit("yt-dlp wird installiert...")
-                urllib.request.urlretrieve(YTDLP_URL, YTDLP_PATH); self.log.emit("yt-dlp ✓")
+                self._download_with_progress(YTDLP_URL, YTDLP_PATH, 0, 20)
+                self.log.emit("yt-dlp ✓")
+            else:
+                self.progress.emit(20)
+
             if not os.path.exists(FFMPEG_PATH):
                 self.log.emit("ffmpeg wird installiert (~80 MB)...")
                 zp = os.path.join(TOOLS_DIR,"ffmpeg.zip")
-                urllib.request.urlretrieve(FFMPEG_URL, zp)
+                self._download_with_progress(FFMPEG_URL, zp, 20, 95)
+                
                 with zipfile.ZipFile(zp) as z:
                     for m in z.namelist():
                         if m.endswith("ffmpeg.exe"):
@@ -236,8 +317,11 @@ class ToolsWorker(QThread):
                     dp = os.path.join(TOOLS_DIR,d)
                     if os.path.isdir(dp): shutil.rmtree(dp, ignore_errors=True)
                 self.log.emit("ffmpeg ✓")
+            
+            self.progress.emit(100)
             self.log.emit("Bereit — Strg+V zum schnellen Download")
-        except Exception as e: self.log.emit(f"Fehler: {e}")
+        except Exception as e: 
+            self.log.emit(f"Fehler: {e}")
         self.done.emit()
 
 # ── UI Helpers ────────────────────────────────────────────────────────────────
@@ -304,6 +388,7 @@ class SettingsPanel(QWidget):
         title.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
         hl.addWidget(title); hl.addStretch()
         
+        # Roter Schließen-Button mit weißem X
         close = AnimatedButton("✕", C_RAISED, C_RED, C_MUTED, is_flat=True)
         close.setFixedSize(34, 34); close.clicked.connect(self.slide_out)
         hl.addWidget(close); root.addWidget(hdr); root.addWidget(HSep())
@@ -431,8 +516,9 @@ class MainWindow(QMainWindow):
         hl.addWidget(self._ui_update_btn)
         hl.addSpacing(8)
         
-        s = AnimatedButton("⚙", C_RAISED, "#2a2a3a", C_TEXT, is_flat=True)
-        s.setFixedSize(36,36); s.clicked.connect(self._settings.slide_in); hl.addWidget(s)
+        # Echtes Zahnrad als Button
+        s = GearButton()
+        s.clicked.connect(self._settings.slide_in); hl.addWidget(s)
         pl.addWidget(w)
 
     def _build_yt(self, pl):
@@ -542,6 +628,8 @@ class MainWindow(QMainWindow):
             self._overlay.raise_()
             
             self._tw=ToolsWorker(); self._tw.log.connect(self._log)
+            # Fortschritt an Overlay senden
+            self._tw.progress.connect(self._overlay.set_progress)
             
             # Wenn fertig, schließe das Overlay
             def on_tools_ready():
