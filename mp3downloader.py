@@ -44,22 +44,22 @@ def save_users(u):
 # ── Stylesheet ────────────────────────────────────────────────────────────────
 STYLE = """
 * { font-family: 'Segoe UI', sans-serif; }
-QMainWindow, QWidget#root { background: #0a0a14; }
-QScrollArea { background: #0a0a14; border: none; }
-QScrollBar:vertical { background: #0a0a14; width: 6px; border-radius: 3px; }
+QMainWindow, QWidget#root { background: #060B1F; }
+QScrollArea { background: #060B1F; border: none; }
+QScrollBar:vertical { background: #060B1F; width: 6px; border-radius: 3px; }
 QScrollBar::handle:vertical { background: #8b5cf6; border-radius: 3px; min-height: 20px; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
 
 QWidget#card {
-    background: #111122;
-    border: 1px solid #2a2a50;
-    border-radius: 12px;
+    background: #0C1228;
+    border: 1px solid #1B2A52;
+    border-radius: 16px;
 }
 QWidget#card2 { background: #181832; border-radius: 0px; }
 
 QLineEdit {
     background: #1e1e3a;
-    border: 1px solid #2a2a50;
+    border: 1px solid #1B2A52;
     border-radius: 8px;
     color: #f0efff;
     padding: 8px 14px;
@@ -69,7 +69,7 @@ QLineEdit:focus { border: 1px solid #8b5cf6; }
 QLineEdit::placeholder { color: #50507a; }
 
 QTextEdit {
-    background: #111122;
+    background: #0C1228;
     border: none;
     color: #9090b8;
     font-family: Consolas;
@@ -278,8 +278,8 @@ class SettingsPanel(QWidget):
         self.set_open   = open_folder_setter
         self.setFixedSize(500, 340)
         self.setStyleSheet("""
-            QWidget { background: #181832; border-radius: 12px; }
-            QWidget#hdr { background: #111122; border-top-left-radius:12px; border-top-right-radius:12px; border-bottom-left-radius:0; border-bottom-right-radius:0; }
+            QWidget { background: #181832; border-radius: 16px; }
+            QWidget#hdr { background: #0C1228; border-top-left-radius:12px; border-top-right-radius:12px; border-bottom-left-radius:0; border-bottom-right-radius:0; }
         """)
         self._build()
         self.hide()
@@ -549,7 +549,7 @@ class MainWindow(QMainWindow):
         self._dl_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._dl_btn.setFont(QFont("Segoe UI Black", 14))
         self._dl_btn.setStyleSheet("""
-            QPushButton { background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #8b5cf6, stop:1 #6d28d9); color:#f0efff; border-radius:12px; }
+            QPushButton { background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #8B5CF6, stop:1 #2563EB); color:#f0efff; border-radius:12px; }
             QPushButton:hover { background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #a78bfa, stop:1 #8b5cf6); }
             QPushButton:pressed { background: #6d28d9; }
             QPushButton:disabled { background: #1e1e3a; color:#50507a; }
@@ -892,6 +892,12 @@ class LoginWindow(QMainWindow):
             self.logged_in = True; self.close()
         else:
             self._err.setText("Ungültiger Admin-Code.")
+if (loginSuccess)
+{
+    MainWindow main = new MainWindow();
+    main.Show();
+    this.Hide(); // oder Close()
+}
 
 
 # ── Entry Point ───────────────────────────────────────────────────────────────
