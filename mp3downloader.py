@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
     QScrollArea, QStackedWidget, QButtonGroup, QFrame, QGraphicsDropShadowEffect
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QPropertyAnimation, QEasingCurve, QTimer, QPoint, QVariantAnimation
-from PyQt6.QtGui import QFont, QIcon, QPalette, QColor, QPainter
+from PyQt6.QtGui import QFont, QIcon, QPalette, QColor, QPainter, QPen
 
 # ── Absolut sicherer SSL-Bypass für alle Threads und urllib-Funktionen ───────
 try:
@@ -94,6 +94,58 @@ QTextEdit {{
 
 QLabel {{ background: transparent; color: {C_TEXT}; }}
 """
+
+# ── Vollbild Lade-Overlay für Komponenten-Downloads ───────────────────────────
+class LoadingOverlay(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False) # Blockiert Klicks
+        self.angle = 0
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self._rotate)
+        self.timer.start(16) # ~60 FPS für flüssige Animation
+        self.hide()
+
+    def _rotate(self):
+        self.angle = (self.angle + 4) % 360
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # Grauer, halbtransparenter Hintergrund
+        painter.fillRect(self.rect(), QColor(15, 15, 25, 215))
+        
+        # Mitte berechnen
+        cx = self.width() // 2
+        cy = self.height() // 2
+        size = 60
+        
+        # Großen, animierten Kreis zeichnen
+        pen = QPen(QColor(C_BORDER))
+        pen.setWidth(6)
+        painter.setPen(pen)
+        painter.drawEllipse(cx - size, cy - size - 20, size * 2, size * 2)
+        
+        pen.setColor(QColor(C_ACCENT))
+        painter.setPen(pen)
+        painter.drawArc(cx - size, cy - size - 20, size * 2, size * 2, -self.angle * 16, 80 * 16)
+        
+        # Text unter dem Kreis zeichnen
+        painter.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        painter.setPen(QColor(C_TEXT))
+        text = "Komponenten werden heruntergeladen..."
+        subtext = "Bitte warten, yt-dlp & ffmpeg werden eingerichtet."
+        
+        tw = painter.fontMetrics().horizontalAdvance(text)
+        painter.drawText(cx - (tw // 2), cy + size + 20, text)
+        
+        painter.setFont(QFont("Segoe UI", 9))
+        painter.setPen(QColor(C_MUTED))
+        tsw = painter.fontMetrics().horizontalAdvance(subtext)
+        painter.drawText(cx - (tsw // 2), cy + size + 45, subtext)
+
 
 # ── Animierter High-End Button ────────────────────────────────────────────────
 class AnimatedButton(QPushButton):
@@ -333,6 +385,10 @@ class MainWindow(QMainWindow):
         scroll.setWidget(inner); ml.addWidget(scroll)
 
         self._settings = SettingsPanel(root, self)
+        
+        # Lade-Overlay erstellen und an Root binden
+        self._overlay = LoadingOverlay(root)
+        
         self._build_header(il)
         self._build_yt(il)
         self._build_search(il)
@@ -348,6 +404,8 @@ class MainWindow(QMainWindow):
         super().resizeEvent(e)
         if self._settings.isVisible():
             self._settings.move((self.centralWidget().width()-self._settings.width())//2, (self.centralWidget().height()-self._settings.height())//2)
+        if self._overlay.isVisible():
+            self._overlay.setGeometry(self.centralWidget().rect())
 
     def keyPressEvent(self, e):
         if e.key()==Qt.Key.Key_V and e.modifiers()==Qt.KeyboardModifier.ControlModifier:
@@ -476,9 +534,21 @@ class MainWindow(QMainWindow):
     def _check_tools(self):
         missing=[n for n,p in [("yt-dlp",YTDLP_PATH),("ffmpeg",FFMPEG_PATH)] if not os.path.exists(p)]
         if missing:
-            self._log(f"Komponenten fehlen: {', '.join(missing)}..."); self._busy(True)
+            self._log(f"Komponenten fehlen: {', '.join(missing)}...")
+            
+            # Overlay aktivieren & positionieren
+            self._overlay.setGeometry(self.centralWidget().rect())
+            self._overlay.show()
+            self._overlay.raise_()
+            
             self._tw=ToolsWorker(); self._tw.log.connect(self._log)
-            self._tw.done.connect(lambda: self._busy(False)); self._tw.start()
+            
+            # Wenn fertig, schließe das Overlay
+            def on_tools_ready():
+                self._overlay.hide()
+            
+            self._tw.done.connect(on_tools_ready)
+            self._tw.start()
         else: self._log("Bereit — Strg+V zum schnellen Download")
 
     def _yt_search(self, q):
