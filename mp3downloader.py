@@ -1,5 +1,5 @@
-# WaveLoad v10.1
-import sys, os, re, threading, subprocess, shutil, zipfile, hashlib, json
+# WaveLoad v10.2
+import sys, os, re, threading, subprocess, shutil, zipfile, hashlib, json, ssl
 import urllib.request, urllib.parse
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -9,10 +9,19 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QPropertyAnimation, QEasingCurve, QTimer, QPoint, QVariantAnimation
 from PyQt6.QtGui import QFont, QIcon, QPalette, QColor, QPainter
 
-VERSION    = "10.1"
+# ── Absolut sicherer SSL-Bypass für alle Threads und urllib-Funktionen ───────
+try:
+    _context = ssl._create_unverified_context()
+    ssl._create_default_https_context = ssl._create_unverified_context
+    _opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=_context))
+    urllib.request.install_opener(_opener)
+except:
+    pass
+
+VERSION    = "10.2"
 APP_NAME   = "WaveLoad"
-GITHUB_RAW = "https://raw.githubusercontent.com/alex63494711-cmd/WaveLoad-by-Alex/refs/heads/WaveLoad-Updates/mp3downloader.py"
-GITHUB_EXE = "https://github.com/alex63494711-cmd/WaveLoad-by-Alex/releases/latest/download/WaveLoad.exe"
+GITHUB_RAW = "https://raw.githubusercontent.com/alex63494711-cmd/alex-mp3-song-app/refs/heads/main/mp3downloader.py"
+GITHUB_EXE = "https://github.com/alex63494711-cmd/alex-mp3-song-app/releases/latest/download/WaveLoad.exe"
 IS_EXE     = getattr(sys, 'frozen', False)
 BASE_DIR   = os.path.dirname(os.path.abspath(sys.executable if IS_EXE else __file__))
 TOOLS_DIR  = os.path.join(BASE_DIR, "tools")
@@ -98,7 +107,6 @@ class AnimatedButton(QPushButton):
         self.setFixedHeight(44)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         
-        # Color-Fade Animation
         self.anim = QVariantAnimation(self)
         self.anim.setDuration(220)
         self.anim.setEasingCurve(QEasingCurve.Type.OutCubic)
