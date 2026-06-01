@@ -11,8 +11,8 @@ from PyQt6.QtGui import QFont, QIcon, QPalette, QColor
 
 VERSION    = "10.0"
 APP_NAME   = "WaveLoad"
-GITHUB_RAW = "https://raw.githubusercontent.com/alex63494711-cmd/alex-mp3-song-app/refs/heads/main/mp3downloader.py"
-GITHUB_EXE = "https://github.com/alex63494711-cmd/alex-mp3-song-app/releases/latest/download/WaveLoad.exe"
+GITHUB_RAW = "https://raw.githubusercontent.com/alex63494711-cmd/WaveLoad-by-Alex/refs/heads/WaveLoad-Updates/mp3downloader.py"
+GITHUB_EXE = "https://github.com/alex63494711-cmd/WaveLoad-by-Alex/releases/latest/download/WaveLoad.exe"
 IS_EXE     = getattr(sys, 'frozen', False)
 BASE_DIR   = os.path.dirname(os.path.abspath(sys.executable if IS_EXE else __file__))
 TOOLS_DIR  = os.path.join(BASE_DIR, "tools")
