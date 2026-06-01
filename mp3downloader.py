@@ -4,10 +4,10 @@ import urllib.request, urllib.parse
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QPushButton, QFileDialog, QTextEdit,
-    QScrollArea, QStackedWidget, QButtonGroup, QFrame
+    QScrollArea, QStackedWidget, QButtonGroup, QFrame, QGraphicsDropShadowEffect
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QPropertyAnimation, QEasingCurve, QTimer, QPoint
-from PyQt6.QtGui import QFont, QIcon, QPalette, QColor
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QPropertyAnimation, QEasingCurve, QTimer, QPoint, QVariantAnimation
+from PyQt6.QtGui import QFont, QIcon, QPalette, QColor, QPainter
 
 VERSION    = "10.0"
 APP_NAME   = "WaveLoad"
@@ -24,20 +24,20 @@ USERS_FILE = os.path.join(BASE_DIR, "users.json")
 ADMIN_CODE = "WL-ADMIN-2024"
 CNW        = 0x08000000
 
-# ── Farben ────────────────────────────────────────────────────────────────────
-C_BG      = "#0f0f13"   # Hintergrund
-C_SURFACE = "#1c1c23"   # Cards / Sections
-C_RAISED  = "#242430"   # Inputs, Buttons-Hintergrund
-C_BORDER  = "#35354a"   # Rahmen
-C_ACCENT  = "#7c6af5"   # Lila Akzent
-C_ACCENT2 = "#9d8fff"   # Hover
-C_TEXT    = "#f0f0ff"   # Haupttext
-C_MUTED   = "#9090b0"   # Sekundärtext
-C_DIM     = "#55556a"   # Placeholder / Labels
-C_GREEN   = "#22c55e"
-C_RED     = "#f87171"
-C_SPOTIFY = "#1db954"
-C_TIKTOK  = "#2bbdc4"
+# ── Modernes Farb-Set ──────────────────────────────────────────────────────────
+C_BG      = "#08080c"   # Tiefschwarz/Blau
+C_SURFACE = "#111118"   # Sanftes Dunkelgrau für Cards
+C_RAISED  = "#181824"   # Inputs & Standard-Buttons
+C_BORDER  = "#222235"   # Dezente Trennlinien
+C_ACCENT  = "#6366f1"   # Premium Indigo / Hauptfarbe
+C_ACCENT2 = "#4f46e5"   # Dunkleres Indigo für Klicks
+C_TEXT    = "#f8fafc"   # Reinweiß für Text
+C_MUTED   = "#94a3b8"   # Slate-Grau für Sekundärtexte
+C_DIM     = "#475569"   # Placeholder
+C_GREEN   = "#10b981"   # Smaragd-Grün
+C_RED     = "#ef4444"   # Alarmsignal-Rot
+C_SPOTIFY = "#1ed760"   # Echtes Spotify-Grün
+C_TIKTOK  = "#00f2fe"   # Neon-Cyan für TikTok
 
 def _h(s): return hashlib.sha256(s.encode()).hexdigest()
 def load_users():
@@ -50,75 +50,93 @@ def save_users(u):
     with open(USERS_FILE,"w") as f: json.dump(u,f)
 
 STYLE = f"""
-* {{ font-family: 'Segoe UI', Arial, sans-serif; color: {C_TEXT}; }}
+* {{ font-family: 'Segoe UI', system-ui, sans-serif; color: {C_TEXT}; }}
 QMainWindow, QDialog {{ background: {C_BG}; }}
 QWidget#bg   {{ background: {C_BG}; }}
-QWidget#surf {{ background: {C_SURFACE}; border-radius: 12px; }}
+QWidget#surf {{ background: {C_SURFACE}; border: 1px solid {C_BORDER}; border-radius: 14px; }}
 
 QScrollArea  {{ background: {C_BG}; border: none; }}
-QScrollBar:vertical {{ background: {C_BG}; width: 4px; border-radius: 2px; }}
-QScrollBar::handle:vertical {{ background: {C_BORDER}; border-radius: 2px; min-height: 20px; }}
+QScrollBar:vertical {{ background: {C_BG}; width: 6px; border-radius: 3px; }}
+QScrollBar::handle:vertical {{ background: {C_BORDER}; border-radius: 3px; min-height: 25px; }}
+QScrollBar::handle:vertical:hover {{ background: {C_ACCENT}; }}
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
 
 QLineEdit {{
     background: {C_RAISED};
-    border: 1.5px solid {C_BORDER};
-    border-radius: 8px;
+    border: 1px solid {C_BORDER};
+    border-radius: 10px;
     color: {C_TEXT};
-    padding: 0 14px;
+    padding: 0 16px;
     font-size: 10pt;
-    selection-background-color: {C_ACCENT};
 }}
-QLineEdit:focus {{ border-color: {C_ACCENT}; background: #26263a; }}
-QLineEdit[readOnly="true"] {{ color: {C_MUTED}; }}
+QLineEdit:focus {{ border: 1.5px solid {C_ACCENT}; background: #1c1c2b; }}
+QLineEdit[readOnly="true"] {{ color: {C_MUTED}; background: #0e0e16; }}
 
 QTextEdit {{
-    background: {C_SURFACE};
-    border: none;
+    background: #0c0c14;
+    border: 1px solid {C_BORDER};
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
     color: {C_MUTED};
-    font-family: Consolas, monospace;
+    font-family: 'Consolas', monospace;
     font-size: 9pt;
-    padding: 8px 12px;
+    padding: 12px;
 }}
-
-QPushButton {{
-    background: {C_ACCENT};
-    color: {C_TEXT};
-    border: none;
-    border-radius: 8px;
-    font-size: 10pt;
-    font-weight: bold;
-    padding: 0 18px;
-}}
-QPushButton:hover   {{ background: {C_ACCENT2}; }}
-QPushButton:pressed {{ background: #5a48d4; }}
-QPushButton:disabled {{ background: {C_RAISED}; color: {C_DIM}; }}
-
-QPushButton#flat {{
-    background: {C_RAISED};
-    color: {C_MUTED};
-    border: 1.5px solid {C_BORDER};
-}}
-QPushButton#flat:hover {{ background: #2e2e3e; color: {C_TEXT}; border-color: {C_ACCENT}; }}
-
-QPushButton#spotify {{ background: {C_SPOTIFY}; color: #000; border: none; }}
-QPushButton#spotify:hover {{ background: #25d160; }}
-QPushButton#tiktok  {{ background: {C_TIKTOK};  color: #000; border: none; }}
-QPushButton#tiktok:hover  {{ background: #38d4db; }}
-
-QPushButton#close {{
-    background: {C_RAISED};
-    color: {C_MUTED};
-    border: none;
-    border-radius: 6px;
-    font-size: 13pt;
-    font-weight: bold;
-    padding: 0;
-}}
-QPushButton#close:hover {{ background: {C_RED}; color: #fff; }}
 
 QLabel {{ background: transparent; color: {C_TEXT}; }}
 """
+
+# ── Animierter High-End Button ────────────────────────────────────────────────
+class AnimatedButton(QPushButton):
+    def __init__(self, text, bg_color, hover_color, text_color="#ffffff", parent=None, is_flat=False):
+        super().__init__(text, parent)
+        self.c_base = QColor(bg_color)
+        self.c_hover = QColor(hover_color)
+        self.c_text = text_color
+        self.is_flat = is_flat
+        self.curr_bg = self.c_base
+        self.setFixedHeight(44)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        
+        # Color-Fade Animation
+        self.anim = QVariantAnimation(self)
+        self.anim.setDuration(220)
+        self.anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self.anim.valueChanged.connect(self._animate_style)
+        
+        self._apply_style(self.c_base)
+
+    def _animate_style(self, color):
+        self.curr_bg = color
+        self._apply_style(color)
+
+    def _apply_style(self, color):
+        border_css = f"border: 1px solid {C_BORDER};" if self.is_flat else "border: none;"
+        self.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {color.name()};
+                color: {self.c_text};
+                {border_css}
+                border-radius: 10px;
+                font-size: 10pt;
+                font-weight: bold;
+                padding: 0 18px;
+            }}
+        """)
+
+    def enterEvent(self, event):
+        self.anim.stop()
+        self.anim.setStartValue(self.curr_bg)
+        self.anim.setEndValue(self.c_hover)
+        self.anim.start()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.anim.stop()
+        self.anim.setStartValue(self.curr_bg)
+        self.anim.setEndValue(self.c_base)
+        self.anim.start()
+        super().leaveEvent(event)
 
 # ── Workers ───────────────────────────────────────────────────────────────────
 class Worker(QThread):
@@ -168,17 +186,9 @@ def E(ph="", pw=False, h=44):
     if pw: e.setEchoMode(QLineEdit.EchoMode.Password)
     return e
 
-def B(text, oid=None, h=44, w=None):
-    b = QPushButton(text); b.setFixedHeight(h)
-    b.setCursor(Qt.CursorShape.PointingHandCursor)
-    if oid: b.setObjectName(oid)
-    if w:   b.setFixedWidth(w)
-    return b
-
 def L(text, size=10, color=C_TEXT, bold=False):
     l = QLabel(text)
     l.setFont(QFont("Segoe UI", size, QFont.Weight.Bold if bold else QFont.Weight.Normal))
-    l.setStyleSheet(f"color:{color}; background:transparent;")
     return l
 
 def HSep():
@@ -187,24 +197,30 @@ def HSep():
     return f
 
 class Section(QWidget):
-    """Surface card with accent bar left."""
     def __init__(self, title, accent=C_ACCENT):
         super().__init__(); self.setObjectName("surf")
+        
+        # Sanfter Drop-Shadow für modernen Tiefen-Effekt
+        sh = QGraphicsDropShadowEffect()
+        sh.setBlurRadius(12); sh.setXOffset(0); sh.setYOffset(4)
+        sh.setColor(QColor(0,0,0,60)); self.setGraphicsEffect(sh)
+
         root = QVBoxLayout(self); root.setContentsMargins(0,0,0,0); root.setSpacing(0)
-        # header row
-        hdr = QWidget(); hdr.setStyleSheet(f"background:{C_SURFACE}; border-top-left-radius:12px; border-top-right-radius:12px;")
+        hdr = QWidget(); hdr.setStyleSheet(f"background:{C_SURFACE}; border-top-left-radius:14px; border-top-right-radius:14px;")
         hl = QHBoxLayout(hdr); hl.setContentsMargins(0,0,16,0); hl.setSpacing(0)
-        bar = QWidget(); bar.setFixedWidth(4)
-        bar.setStyleSheet(f"background:{accent}; border-top-left-radius:12px;")
+        
+        bar = QWidget(); bar.setFixedWidth(4); bar.setFixedHeight(20)
+        bar.setStyleSheet(f"background:{accent}; border-top-right-radius:4px; border-bottom-right-radius:4px;")
         hl.addWidget(bar)
-        tl = L(title, 10, C_TEXT, True); tl.setContentsMargins(14,12,0,12)
+        
+        tl = L(title, 10, C_TEXT, True); tl.setContentsMargins(14,14,0,14)
         hl.addWidget(tl); hl.addStretch()
-        root.addWidget(hdr)
-        root.addWidget(HSep())
-        # body
-        self.body = QWidget(); self.body.setStyleSheet(f"background:{C_SURFACE}; border-bottom-left-radius:12px; border-bottom-right-radius:12px;")
-        self.bl = QVBoxLayout(self.body); self.bl.setContentsMargins(16,14,16,16); self.bl.setSpacing(10)
+        root.addWidget(hdr); root.addWidget(HSep())
+        
+        self.body = QWidget(); self.body.setStyleSheet(f"background:{C_SURFACE}; border-bottom-left-radius:14px; border-bottom-right-radius:14px;")
+        self.bl = QVBoxLayout(self.body); self.bl.setContentsMargins(18,16,18,18); self.bl.setSpacing(12)
         root.addWidget(self.body)
+        
     def add(self, w): self.bl.addWidget(w)
     def row(self, l): self.bl.addLayout(l)
 
@@ -214,85 +230,58 @@ class SettingsPanel(QWidget):
         super().__init__(parent)
         self.app = app
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setStyleSheet(f"""
-            SettingsPanel {{
-                background: {C_SURFACE};
-                border-radius: 14px;
-                border: 1.5px solid {C_BORDER};
-            }}
-        """)
-        self.setFixedWidth(480)
+        self.setStyleSheet(f"SettingsPanel {{ background: {C_SURFACE}; border-radius: 16px; border: 1px solid {C_BORDER}; }}")
+        self.setFixedWidth(460)
+        sh = QGraphicsDropShadowEffect(); sh.setBlurRadius(25); sh.setColor(QColor(0,0,0,150)); self.setGraphicsEffect(sh)
         self._build(); self.hide()
         self._anim = QPropertyAnimation(self, b"pos")
 
     def _build(self):
         root = QVBoxLayout(self); root.setContentsMargins(0,0,0,0); root.setSpacing(0)
-
-        # ── Header
-        hdr = QWidget()
-        hdr.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        hdr.setStyleSheet(f"background:{C_RAISED}; border-top-left-radius:14px; border-top-right-radius:14px;")
+        hdr = QWidget(); hdr.setStyleSheet(f"background:{C_RAISED}; border-top-left-radius:16px; border-top-right-radius:16px;")
         hdr.setFixedHeight(56)
         hl = QHBoxLayout(hdr); hl.setContentsMargins(20,0,14,0); hl.setSpacing(0)
         title = QLabel("Einstellungen")
-        title.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
-        title.setStyleSheet(f"color:{C_TEXT}; background:transparent;")
+        title.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
         hl.addWidget(title); hl.addStretch()
-        close = QPushButton("✕")
-        close.setFixedSize(34, 34)
-        close.setCursor(Qt.CursorShape.PointingHandCursor)
-        close.setObjectName("close")
-        close.clicked.connect(self.slide_out)
-        hl.addWidget(close)
-        root.addWidget(hdr)
+        
+        close = AnimatedButton("✕", C_RAISED, C_RED, C_MUTED, is_flat=True)
+        close.setFixedSize(34, 34); close.clicked.connect(self.slide_out)
+        hl.addWidget(close); root.addWidget(hdr); root.addWidget(HSep())
 
-        # Accent line under header
-        acc = QWidget(); acc.setFixedHeight(2)
-        acc.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        acc.setStyleSheet(f"background:{C_ACCENT};")
-        root.addWidget(acc)
-
-        # ── Body
-        body = QWidget()
-        body.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        body.setStyleSheet(f"background:{C_SURFACE}; border-bottom-left-radius:14px; border-bottom-right-radius:14px;")
-        bl = QVBoxLayout(body); bl.setContentsMargins(22,20,22,22); bl.setSpacing(18)
+        body = QWidget(); bl = QVBoxLayout(body); bl.setContentsMargins(24,20,24,24); bl.setSpacing(18)
         root.addWidget(body)
 
-        # Ordner
-        bl.addWidget(QLabel("Speicherordner") if False else self._lbl("Speicherordner"))
+        bl.addWidget(self._lbl("Speicherordner"))
         dr = QHBoxLayout(); dr.setSpacing(10)
         self.dir_e = QLineEdit(); self.dir_e.setReadOnly(True); self.dir_e.setFixedHeight(42)
         self.dir_e.setText(self.app._output_dir)
-        self.dir_e.setStyleSheet(f"background:{C_RAISED}; border:1.5px solid {C_BORDER}; border-radius:8px; color:{C_MUTED}; padding:0 12px; font-size:10pt;")
-        pick = QPushButton("···"); pick.setFixedSize(42,42); pick.setCursor(Qt.CursorShape.PointingHandCursor)
-        pick.setObjectName("flat"); pick.clicked.connect(self._browse)
+        pick = AnimatedButton("···", C_RAISED, "#2d2d3d", C_TEXT, is_flat=True); pick.setFixedSize(42,42)
+        pick.clicked.connect(self._browse)
         dr.addWidget(self.dir_e,1); dr.addWidget(pick); bl.addLayout(dr)
 
-        # Qualität
         bl.addWidget(self._lbl("Audioqualität"))
         qr = QHBoxLayout(); qr.setSpacing(8); self._qg = QButtonGroup(self)
         for i,(t,v) in enumerate([("320 kbps","0"),("192 kbps","5"),("128 kbps","9")]):
             b = QPushButton(t); b.setCheckable(True); b.setFixedHeight(42)
             b.setCursor(Qt.CursorShape.PointingHandCursor); b.setProperty("qval",v)
-            b.setStyleSheet(f"QPushButton{{background:{C_RAISED};color:{C_MUTED};border-radius:8px;font-size:9pt;font-weight:bold;border:1.5px solid {C_BORDER};}} QPushButton:checked{{background:{C_ACCENT};color:{C_TEXT};border-color:{C_ACCENT};}} QPushButton:hover{{background:#2e2e3e;color:{C_TEXT};}}")
+            b.setStyleSheet(f"QPushButton{{background:{C_RAISED};color:{C_MUTED};border-radius:10px;font-size:9pt;font-weight:bold;border:1px solid {C_BORDER};}} QPushButton:checked{{background:{C_ACCENT};color:{C_TEXT};border-color:{C_ACCENT};}} QPushButton:hover{{background:#222232;}}")
             self._qg.addButton(b,i); qr.addWidget(b)
             if i==0: b.setChecked(True)
         self._qg.idToggled.connect(lambda i,c: c and setattr(self.app,'_quality',self._qg.button(i).property("qval")))
         bl.addLayout(qr)
 
-        # Nach Download
         bl.addWidget(self._lbl("Nach Download"))
-        self._ocb = QPushButton("  Dateimanager nach Download öffnen")
+        self._ocb = QPushButton("  Dateimanager nach Abschluss öffnen")
         self._ocb.setCheckable(True); self._ocb.setChecked(True); self._ocb.setFixedHeight(42)
         self._ocb.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._ocb.setStyleSheet(f"QPushButton{{background:{C_RAISED};color:{C_MUTED};border-radius:8px;font-size:9pt;text-align:left;padding:0 14px;border:1.5px solid {C_BORDER};}} QPushButton:checked{{background:#132218;color:{C_GREEN};border-color:#166534;}}")
+        self._ocb.setStyleSheet(f"QPushButton{{background:{C_RAISED};color:{C_MUTED};border-radius:10px;font-size:9pt;text-align:left;padding:0 14px;border:1px solid {C_BORDER};}} QPushButton:checked{{background:#062017;color:{C_GREEN};border-color:#0f5138;}}")
         self._ocb.toggled.connect(lambda v: setattr(self.app,'_open_folder',v))
         bl.addWidget(self._ocb)
         self.adjustSize()
 
     def _lbl(self, text):
-        l = QLabel(text); l.setStyleSheet(f"color:{C_DIM}; font-size:9pt; background:transparent;")
+        l = QLabel(text); l.setStyleSheet(f"color:{C_MUTED}; font-size:9pt; font-weight:bold;")
         return l
 
     def _browse(self):
@@ -302,31 +291,16 @@ class SettingsPanel(QWidget):
     def slide_in(self):
         self.adjustSize()
         pw = self.parent().width(); ph = self.parent().height()
-        w = self.width(); h = self.height()
-        cx = (pw-w)//2; cy = (ph-h)//2
-        self.move(cx, -h); self.show(); self.raise_()
-        self._anim.stop()
-        self._anim.setEasingCurve(QEasingCurve.Type.OutBack)
-        self._anim.setDuration(400)
-        self._anim.setStartValue(QPoint(cx, -h))
-        self._anim.setEndValue(QPoint(cx, cy))
-        self._anim.start()
+        cx = (pw-self.width())//2; cy = (ph-self.height())//2
+        self.move(cx, -self.height()); self.show(); self.raise_()
+        self._anim.stop(); self._anim.setEasingCurve(QEasingCurve.Type.OutBack)
+        self._anim.setDuration(400); self._anim.setStartValue(QPoint(cx, -self.height())); self._anim.setEndValue(QPoint(cx, cy)); self._anim.start()
 
     def slide_out(self):
-        pw = self.parent().width(); ph = self.parent().height()
-        w = self.width(); h = self.height()
-        cx = (pw-w)//2; cy = (ph-h)//2
-        self._anim.stop()
-        self._anim.setEasingCurve(QEasingCurve.Type.InBack)
-        self._anim.setDuration(260)
-        self._anim.setStartValue(QPoint(cx, cy))
-        self._anim.setEndValue(QPoint(cx, -h))
-        def _hide():
-            self.hide()
-            try: self._anim.finished.disconnect(_hide)
-            except: pass
-        self._anim.finished.connect(_hide)
-        self._anim.start()
+        pw = self.parent().width(); cx = (pw-self.width())//2; cy = self.pos().y()
+        self._anim.stop(); self._anim.setEasingCurve(QEasingCurve.Type.InBack); self._anim.setDuration(250)
+        self._anim.setStartValue(QPoint(cx, cy)); self._anim.setEndValue(QPoint(cx, -self.height()))
+        self._anim.finished.connect(self.hide); self._anim.start()
 
 # ── Main Window ───────────────────────────────────────────────────────────────
 class MainWindow(QMainWindow):
@@ -335,7 +309,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle(APP_NAME); self.resize(720,820); self.setMinimumSize(600,560)
+        self.setWindowTitle(APP_NAME); self.resize(740,840); self.setMinimumSize(620,580)
         self._output_dir  = os.path.join(os.path.expanduser("~"),"Music")
         self._quality     = "0"
         self._open_folder = True
@@ -347,9 +321,8 @@ class MainWindow(QMainWindow):
         ml = QVBoxLayout(root); ml.setContentsMargins(0,0,0,0)
 
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         inner = QWidget(); inner.setStyleSheet(f"background:{C_BG};")
-        il = QVBoxLayout(inner); il.setContentsMargins(22,22,22,28); il.setSpacing(10)
+        il = QVBoxLayout(inner); il.setContentsMargins(24,24,24,28); il.setSpacing(16)
         scroll.setWidget(inner); ml.addWidget(scroll)
 
         self._settings = SettingsPanel(root, self)
@@ -367,9 +340,7 @@ class MainWindow(QMainWindow):
     def resizeEvent(self, e):
         super().resizeEvent(e)
         if self._settings.isVisible():
-            pw = self.centralWidget().width(); ph = self.centralWidget().height()
-            w = self._settings.width(); h = self._settings.height()
-            self._settings.move((pw-w)//2, (ph-h)//2)
+            self._settings.move((self.centralWidget().width()-self._settings.width())//2, (self.centralWidget().height()-self._settings.height())//2)
 
     def keyPressEvent(self, e):
         if e.key()==Qt.Key.Key_V and e.modifiers()==Qt.KeyboardModifier.ControlModifier:
@@ -384,100 +355,105 @@ class MainWindow(QMainWindow):
 
     def _build_header(self, pl):
         w = QWidget(); w.setObjectName("surf")
-        hl = QHBoxLayout(w); hl.setContentsMargins(18,14,18,14)
-        hl.addWidget(L(APP_NAME, 17, C_TEXT, True))
+        hl = QHBoxLayout(w); hl.setContentsMargins(20,14,20,14)
+        hl.addWidget(L(APP_NAME, 18, C_TEXT, True))
         hl.addWidget(L(f"v{VERSION}", 8, C_DIM))
         hl.addStretch()
-        self._ui_update_btn = B("Update","flat",36,120)
+        
+        self._ui_update_btn = AnimatedButton("Update", C_RAISED, "#2a2a3a", C_MUTED, is_flat=True)
+        self._ui_update_btn.setFixedHeight(36)
         self._ui_update_btn.clicked.connect(self._check_update)
         hl.addWidget(self._ui_update_btn)
         hl.addSpacing(8)
-        s = B("⚙","flat",36,36); s.clicked.connect(self._settings.slide_in); hl.addWidget(s)
+        
+        s = AnimatedButton("⚙", C_RAISED, "#2a2a3a", C_TEXT, is_flat=True)
+        s.setFixedSize(36,36); s.clicked.connect(self._settings.slide_in); hl.addWidget(s)
         pl.addWidget(w)
 
     def _build_yt(self, pl):
         sec = Section("YouTube / SoundCloud")
-        r = QHBoxLayout(); r.setSpacing(8)
-        self._url = E("Link einfügen...")
-        p = B("Einfügen","flat",44,95)
+        r = QHBoxLayout(); r.setSpacing(10)
+        self._url = E("Link hier einfügen...")
+        p = AnimatedButton("Einfügen", C_RAISED, "#252535", C_MUTED, is_flat=True)
         p.clicked.connect(lambda: self._url.setText(QApplication.clipboard().text().strip()))
         r.addWidget(self._url,1); r.addWidget(p); sec.row(r); pl.addWidget(sec)
 
     def _build_search(self, pl):
-        sec = Section("Song suchen", C_ACCENT2)
-        r = QHBoxLayout(); r.setSpacing(8)
+        sec = Section("Song manuell suchen", "#a855f7")
+        r = QHBoxLayout(); r.setSpacing(10)
         self._sq = E("Songname...")
         self._ar = E("Künstler...")
-        sb = B("Suchen & laden", h=44, w=145); sb.clicked.connect(self._search_btn)
+        sb = AnimatedButton("Suchen & laden", C_ACCENT, C_ACCENT2)
+        sb.clicked.connect(self._search_btn)
         r.addWidget(self._sq,1); r.addWidget(self._ar,1); r.addWidget(sb)
         sec.row(r); pl.addWidget(sec)
 
     def _build_spotify(self, pl):
-        sec = Section("Spotify", C_SPOTIFY)
-        r = QHBoxLayout(); r.setSpacing(8)
-        self._sp = E("Spotify-Link...")
-        p = B("Einfügen","flat",44,95)
+        sec = Section("Spotify Synchronizer", C_SPOTIFY)
+        r = QHBoxLayout(); r.setSpacing(10)
+        self._sp = E("Spotify Track Link...")
+        p = AnimatedButton("Einfügen", C_RAISED, "#252535", C_MUTED, is_flat=True)
         p.clicked.connect(lambda: self._sp.setText(QApplication.clipboard().text().strip()))
-        lb = B("Laden","spotify",44,80); lb.clicked.connect(self._do_spotify)
+        lb = AnimatedButton("Laden", C_SPOTIFY, "#169c46", "#000000")
+        lb.clicked.connect(self._do_spotify)
         r.addWidget(self._sp,1); r.addWidget(p); r.addWidget(lb); sec.row(r); pl.addWidget(sec)
 
     def _build_tiktok(self, pl):
-        sec = Section("TikTok / Instagram", C_TIKTOK)
-        r = QHBoxLayout(); r.setSpacing(8)
-        self._ti = E("TikTok / Instagram Link...")
-        p = B("Einfügen","flat",44,95)
+        sec = Section("TikTok / Instagram Audio Extractor", C_TIKTOK)
+        r = QHBoxLayout(); r.setSpacing(10)
+        self._ti = E("Video Link...")
+        p = AnimatedButton("Einfügen", C_RAISED, "#252535", C_MUTED, is_flat=True)
         p.clicked.connect(lambda: self._ti.setText(QApplication.clipboard().text().strip()))
-        lb = B("Laden","tiktok",44,80); lb.clicked.connect(self._do_tiktok)
+        lb = AnimatedButton("Laden", C_TIKTOK, "#00b4bd", "#000000")
+        lb.clicked.connect(self._do_tiktok)
         r.addWidget(self._ti,1); r.addWidget(p); r.addWidget(lb); sec.row(r); pl.addWidget(sec)
 
     def _build_dl(self, pl):
-        self._dl_btn = QPushButton("↓  MP3 herunterladen")
-        self._dl_btn.setFixedHeight(52)
-        self._dl_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._dl_btn.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
-        self._dl_btn.setStyleSheet(f"QPushButton{{background:{C_ACCENT};color:{C_TEXT};border-radius:10px;}} QPushButton:hover{{background:{C_ACCENT2};}} QPushButton:pressed{{background:#5a48d4;}} QPushButton:disabled{{background:{C_RAISED};color:{C_DIM};}}")
+        self._dl_btn = AnimatedButton("↓   MP3 herunterladen", C_ACCENT, C_ACCENT2)
+        self._dl_btn.setFixedHeight(54)
+        self._dl_btn.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
         self._dl_btn.clicked.connect(self._start_dl); pl.addWidget(self._dl_btn)
 
-        pb = QWidget(); pb.setFixedHeight(3); pb.setAttribute(Qt.WidgetAttribute.WA_StyledBackground,True)
+        pb = QWidget(); pb.setFixedHeight(4); pb.setAttribute(Qt.WidgetAttribute.WA_StyledBackground,True)
         pb.setStyleSheet(f"background:{C_RAISED}; border-radius:2px;")
-        self._pbi = QWidget(pb); self._pbi.setFixedHeight(3)
+        self._pbi = QWidget(pb); self._pbi.setFixedHeight(4)
         self._pbi.setStyleSheet(f"background:{C_ACCENT}; border-radius:2px;")
         self._pbi.setFixedWidth(0); self._pb_pos=0; self._pb_dir=1; self._pb=pb
         self._pb_t = QTimer(); self._pb_t.timeout.connect(lambda: self._tick())
         pl.addWidget(pb)
 
         self._ok = QWidget(); self._ok.setObjectName("surf")
-        ol = QHBoxLayout(self._ok); ol.setContentsMargins(16,12,16,12)
-        ol.addWidget(L("✓  Download abgeschlossen!",10,C_GREEN,True))
+        ol = QHBoxLayout(self._ok); ol.setContentsMargins(18,14,18,14)
+        ol.addWidget(L("✓  Download erfolgreich abgeschlossen!",10,C_GREEN,True))
         ol.addStretch()
-        self._ok_p = L("",9,C_GREEN); ol.addWidget(self._ok_p)
+        self._ok_p = L("",9,C_MUTED); ol.addWidget(self._ok_p)
         self._ok.hide(); pl.addWidget(self._ok)
 
     def _build_log(self, pl):
         w = QWidget(); w.setObjectName("surf")
         wl = QVBoxLayout(w); wl.setContentsMargins(0,0,0,0); wl.setSpacing(0)
         hdr = QWidget(); hdr.setAttribute(Qt.WidgetAttribute.WA_StyledBackground,True)
-        hdr.setStyleSheet(f"background:{C_RAISED}; border-top-left-radius:12px; border-top-right-radius:12px;")
-        hl = QHBoxLayout(hdr); hl.setContentsMargins(16,9,16,9)
-        hl.addWidget(L("●",8,C_GREEN)); hl.addWidget(L("  LOG",9,C_DIM,True)); hl.addStretch()
-        clr = QPushButton("leeren"); clr.setFixedHeight(26); clr.setCursor(Qt.CursorShape.PointingHandCursor)
-        clr.setStyleSheet(f"QPushButton{{background:transparent;color:{C_DIM};font-size:8pt;border:none;}} QPushButton:hover{{color:{C_MUTED};}}")
+        hdr.setStyleSheet(f"background:{C_RAISED}; border-top-left-radius:14px; border-top-right-radius:14px;")
+        hl = QHBoxLayout(hdr); hl.setContentsMargins(18,10,18,10)
+        hl.addWidget(L("●",8,C_GREEN)); hl.addWidget(L("  SYSTEM LOG",9,C_DIM,True)); hl.addStretch()
+        clr = QPushButton("leeren"); clr.setCursor(Qt.CursorShape.PointingHandCursor)
+        clr.setStyleSheet(f"QPushButton{{background:transparent;color:{C_DIM};font-size:8.5pt;border:none;}} QPushButton:hover{{color:{C_MUTED};}}")
         clr.clicked.connect(lambda: self._log_box.clear()); hl.addWidget(clr)
         wl.addWidget(hdr); wl.addWidget(HSep())
-        self._log_box = QTextEdit(); self._log_box.setReadOnly(True); self._log_box.setFixedHeight(130)
+        self._log_box = QTextEdit(); self._log_box.setReadOnly(True); self._log_box.setFixedHeight(140)
         wl.addWidget(self._log_box); pl.addWidget(w)
 
     def _tick(self):
-        w = self._pb.width(); bw = max(80,w//4)
-        self._pb_pos += self._pb_dir*8
+        w = self._pb.width(); bw = max(90,w//4)
+        self._pb_pos += self._pb_dir*7
         if self._pb_pos+bw>=w: self._pb_dir=-1
         if self._pb_pos<=0: self._pb_dir=1
-        self._pbi.setGeometry(self._pb_pos,0,bw,3)
+        self._pbi.setGeometry(self._pb_pos,0,bw,4)
 
     def _busy(self, on):
         self._dl_btn.setEnabled(not on)
-        self._dl_btn.setText("  Lädt..." if on else "↓  MP3 herunterladen")
-        if on: self._pb_t.start(14)
+        self._dl_btn.setText("  Wird verarbeitet..." if on else "↓   MP3 herunterladen")
+        if on: self._pb_t.start(12)
         else: self._pb_t.stop(); self._pbi.setFixedWidth(0)
 
     def _log(self, m): self._log_box.append(m)
@@ -493,7 +469,7 @@ class MainWindow(QMainWindow):
     def _check_tools(self):
         missing=[n for n,p in [("yt-dlp",YTDLP_PATH),("ffmpeg",FFMPEG_PATH)] if not os.path.exists(p)]
         if missing:
-            self._log(f"Installiere {', '.join(missing)}..."); self._busy(True)
+            self._log(f"Komponenten fehlen: {', '.join(missing)}..."); self._busy(True)
             self._tw=ToolsWorker(); self._tw.log.connect(self._log)
             self._tw.done.connect(lambda: self._busy(False)); self._tw.start()
         else: self._log("Bereit — Strg+V zum schnellen Download")
@@ -574,7 +550,10 @@ class MainWindow(QMainWindow):
             if nv != VERSION:
                 self._log(f"Update verfügbar: Version v{nv} steht bereit!")
                 self._ui_update_btn.setText(f"v{nv} installieren")
-                self._ui_update_btn.setStyleSheet(f"background: {C_GREEN}; color: #000000; font-weight: bold;")
+                self._ui_update_btn.c_base = QColor(C_GREEN)
+                self._ui_update_btn.c_hover = QColor("#059669")
+                self._ui_update_btn.c_text = "#000000"
+                self._ui_update_btn._apply_style(QColor(C_GREEN))
                 try: self._ui_update_btn.clicked.disconnect()
                 except: pass
                 self._ui_update_btn.clicked.connect(lambda: self._download_and_install_update(nv))
@@ -634,7 +613,7 @@ class MainWindow(QMainWindow):
 class LoginWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("WaveLoad"); self.setFixedSize(440,560)
+        self.setWindowTitle("WaveLoad"); self.setFixedSize(440,580)
         self.logged_in=False
         ico=os.path.join(BASE_DIR,"icon.ico")
         if os.path.exists(ico): self.setWindowIcon(QIcon(ico))
@@ -644,47 +623,44 @@ class LoginWindow(QMainWindow):
         root=QWidget(); root.setObjectName("bg"); self.setCentralWidget(root)
         ml=QVBoxLayout(root); ml.setContentsMargins(0,0,0,0); ml.setSpacing(0)
 
-        # Logo
         top=QWidget(); top.setAttribute(Qt.WidgetAttribute.WA_StyledBackground,True)
         top.setStyleSheet(f"background:{C_BG};")
-        tl=QVBoxLayout(top); tl.setContentsMargins(0,36,0,20)
+        tl=QVBoxLayout(top); tl.setContentsMargins(0,40,0,24)
         tl.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         t=QLabel(APP_NAME); t.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        t.setFont(QFont("Segoe UI Black",22,QFont.Weight.Bold))
-        t.setStyleSheet(f"color:{C_TEXT}; background:transparent;"); tl.addWidget(t)
-        s=QLabel("MP3 Downloader"); s.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        s.setStyleSheet(f"color:{C_DIM}; background:transparent; font-size:9pt;"); tl.addWidget(s)
+        t.setFont(QFont("Segoe UI",24,QFont.Weight.Bold))
+        t.setStyleSheet(f"color:{C_TEXT}; background:transparent; letter-spacing: 1px;"); tl.addWidget(t)
+        s=QLabel("PREMIUM AUDIO DOWNLOADER"); s.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        s.setStyleSheet(f"color:{C_DIM}; background:transparent; font-size:8pt; font-weight: bold; letter-spacing: 2px;"); tl.addWidget(s)
         ml.addWidget(top)
 
-        # Tab bar
         tb=QWidget(); tb.setAttribute(Qt.WidgetAttribute.WA_StyledBackground,True)
         tb.setStyleSheet(f"background:{C_BG}; border-bottom:1px solid {C_BORDER};")
-        tbl=QHBoxLayout(tb); tbl.setContentsMargins(32,0,32,0); tbl.setSpacing(0)
+        tbl=QHBoxLayout(tb); tbl.setContentsMargins(40,0,40,0); tbl.setSpacing(0)
         self._tl=QPushButton("Anmelden"); self._tl.setFixedHeight(46)
         self._tr=QPushButton("Registrieren"); self._tr.setFixedHeight(46)
         for b in (self._tl,self._tr):
-            b.setFont(QFont("Segoe UI",11,QFont.Weight.Bold))
+            b.setFont(QFont("Segoe UI",10,QFont.Weight.Bold))
             b.setCursor(Qt.CursorShape.PointingHandCursor); tbl.addWidget(b)
         self._tl.clicked.connect(lambda:self._show(0))
         self._tr.clicked.connect(lambda:self._show(1))
         ml.addWidget(tb)
 
-        # Pages
         self._stack=QStackedWidget(); self._stack.setAttribute(Qt.WidgetAttribute.WA_StyledBackground,True)
         self._stack.setStyleSheet(f"background:{C_BG};")
         self._stack.addWidget(self._login_page()); self._stack.addWidget(self._reg_page())
         ml.addWidget(self._stack,1)
 
-        # Admin
         adm=QWidget(); adm.setAttribute(Qt.WidgetAttribute.WA_StyledBackground,True)
         adm.setStyleSheet(f"background:{C_BG};")
-        al=QVBoxLayout(adm); al.setContentsMargins(32,10,32,24); al.setSpacing(8)
+        al=QVBoxLayout(adm); al.setContentsMargins(40,10,40,26); al.setSpacing(10)
         al.addWidget(HSep())
-        ar=QHBoxLayout(); ar.setSpacing(8)
-        lbl=QLabel("Admin:"); lbl.setStyleSheet(f"color:{C_DIM}; font-size:9pt; background:transparent;")
+        ar=QHBoxLayout(); ar.setSpacing(10)
+        lbl=QLabel("Bypass:"); lbl.setStyleSheet(f"color:{C_DIM}; font-size:9pt; font-weight:bold; background:transparent;")
         ar.addWidget(lbl)
         self._adm=E("Admin-Code",pw=True,h=38)
-        ab=B("→",h=38,w=42); ab.clicked.connect(self._admin)
+        ab=AnimatedButton("→", C_RAISED, "#2d2d3d", C_TEXT, is_flat=True); ab.setFixedSize(42,38)
+        ab.clicked.connect(self._admin)
         ar.addWidget(self._adm,1); ar.addWidget(ab); al.addLayout(ar)
         ml.addWidget(adm)
         self._adm.returnPressed.connect(self._admin)
@@ -696,44 +672,44 @@ class LoginWindow(QMainWindow):
 
     def _login_page(self):
         w=self._page_widget()
-        l=QVBoxLayout(w); l.setContentsMargins(32,26,32,16); l.setSpacing(10)
+        l=QVBoxLayout(w); l.setContentsMargins(40,26,40,16); l.setSpacing(12)
         for label_text, entry_attr, ph, pw in [
-            ("Benutzername","_ue","Dein Benutzername",False),
-            ("Passwort","_pe","Dein Passwort",True)
+            ("BENUTZERNAME","_ue","Dein Benutzername",False),
+            ("PASSWORT","_pe","Dein Passwort",True)
         ]:
-            lbl=QLabel(label_text); lbl.setStyleSheet(f"color:{C_DIM}; font-size:9pt; background:transparent;")
+            lbl=QLabel(label_text); lbl.setStyleSheet(f"color:{C_MUTED}; font-size:8pt; font-weight:bold; background:transparent;")
             l.addWidget(lbl)
             e=E(ph,pw); setattr(self,entry_attr,e); l.addWidget(e)
         self._err=QLabel(""); self._err.setStyleSheet(f"color:{C_RED}; font-size:9pt; background:transparent;")
         l.addWidget(self._err)
-        lb=B("Anmelden",h=48); lb.setFont(QFont("Segoe UI",11,QFont.Weight.Bold))
-        lb.clicked.connect(self._login); l.addWidget(lb); l.addStretch()
+        
+        lb=AnimatedButton("Anmelden", C_ACCENT, C_ACCENT2)
+        lb.setFixedHeight(48); lb.clicked.connect(self._login); l.addWidget(lb); l.addStretch()
         self._pe.returnPressed.connect(self._login)
         return w
 
     def _reg_page(self):
         w=self._page_widget()
-        l=QVBoxLayout(w); l.setContentsMargins(32,26,32,16); l.setSpacing(8)
+        l=QVBoxLayout(w); l.setContentsMargins(40,26,40,16); l.setSpacing(10)
         for label_text, attr, ph, pw in [
-            ("Benutzername","_ru","Gewünschter Benutzername",False),
-            ("Passwort","_rp","Mind. 6 Zeichen",True),
-            ("Passwort bestätigen","_rp2","Passwort wiederholen",True)
+            ("BENUTZERNAME","_ru","Gewünschter Benutzername",False),
+            ("PASSWORT","_rp","Mindestens 6 Zeichen",True),
+            ("PASSWORT BESTÄTIGEN","_rp2","Passwort wiederholen",True)
         ]:
-            lbl=QLabel(label_text); lbl.setStyleSheet(f"color:{C_DIM}; font-size:9pt; background:transparent;")
+            lbl=QLabel(label_text); lbl.setStyleSheet(f"color:{C_MUTED}; font-size:8pt; font-weight:bold; background:transparent;")
             l.addWidget(lbl); e=E(ph,pw); setattr(self,attr,e); l.addWidget(e)
         self._rerr=QLabel(""); self._rerr.setStyleSheet(f"color:{C_RED}; font-size:9pt; background:transparent;")
         l.addWidget(self._rerr)
-        rb=B("Konto erstellen →",h=48)
-        rb.setStyleSheet(f"QPushButton{{background:#132218;color:{C_GREEN};border-radius:8px;font-size:11pt;font-weight:bold;border:1.5px solid #166534;}} QPushButton:hover{{background:#1a2e20;}}")
-        rb.setFont(QFont("Segoe UI",11,QFont.Weight.Bold))
-        rb.clicked.connect(self._do_register); l.addWidget(rb); l.addStretch()
+        
+        rb=AnimatedButton("Konto erstellen", "#062017", "#0f5138", C_GREEN, is_flat=True)
+        rb.setFixedHeight(48); rb.clicked.connect(self._do_register); l.addWidget(rb); l.addStretch()
         self._rp2.returnPressed.connect(self._do_register)
         return w
 
     def _show(self,idx):
         self._stack.setCurrentIndex(idx)
-        act  = f"QPushButton{{background:transparent;color:{C_TEXT};border-bottom:2px solid {C_ACCENT};border-radius:0;font-size:11pt;font-weight:bold;padding:10px 20px;}}"
-        inact= f"QPushButton{{background:transparent;color:{C_DIM};border-bottom:2px solid transparent;border-radius:0;font-size:11pt;font-weight:bold;padding:10px 20px;}} QPushButton:hover{{color:{C_MUTED};}}"
+        act  = f"QPushButton{{background:transparent;color:{C_TEXT};border-bottom:3px solid {C_ACCENT};border-radius:0;font-size:10pt;font-weight:bold;padding:10px 20px;}}"
+        inact= f"QPushButton{{background:transparent;color:{C_DIM};border-bottom:3px solid transparent;border-radius:0;font-size:10pt;font-weight:bold;padding:10px 20px;}} QPushButton:hover{{color:{C_MUTED};}}"
         self._tl.setStyleSheet(act if idx==0 else inact)
         self._tr.setStyleSheet(act if idx==1 else inact)
 
