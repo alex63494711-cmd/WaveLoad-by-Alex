@@ -1,4 +1,4 @@
-# WaveLoad v10.0
+# WaveLoad v10.1
 import sys, os, re, threading, subprocess, shutil, zipfile, hashlib, json
 import urllib.request, urllib.parse
 from PyQt6.QtWidgets import (
@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QPropertyAnimation, QEasingCurve, QTimer, QPoint, QVariantAnimation
 from PyQt6.QtGui import QFont, QIcon, QPalette, QColor, QPainter
 
-VERSION    = "10.0"
+VERSION    = "10.1"
 APP_NAME   = "WaveLoad"
 GITHUB_RAW = "https://raw.githubusercontent.com/alex63494711-cmd/WaveLoad-by-Alex/refs/heads/WaveLoad-Updates/mp3downloader.py"
 GITHUB_EXE = "https://github.com/alex63494711-cmd/WaveLoad-by-Alex/releases/latest/download/WaveLoad.exe"
@@ -200,7 +200,6 @@ class Section(QWidget):
     def __init__(self, title, accent=C_ACCENT):
         super().__init__(); self.setObjectName("surf")
         
-        # Sanfter Drop-Shadow für modernen Tiefen-Effekt
         sh = QGraphicsDropShadowEffect()
         sh.setBlurRadius(12); sh.setXOffset(0); sh.setYOffset(4)
         sh.setColor(QColor(0,0,0,60)); self.setGraphicsEffect(sh)
@@ -398,7 +397,7 @@ class MainWindow(QMainWindow):
         lb.clicked.connect(self._do_spotify)
         r.addWidget(self._sp,1); r.addWidget(p); r.addWidget(lb); sec.row(r); pl.addWidget(sec)
 
-    def _build_tiktok(self, pl):
+    def _build_tiktok((self, pl):
         sec = Section("TikTok / Instagram Audio Extractor", C_TIKTOK)
         r = QHBoxLayout(); r.setSpacing(10)
         self._ti = E("Video Link...")
