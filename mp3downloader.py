@@ -397,7 +397,7 @@ class MainWindow(QMainWindow):
         lb.clicked.connect(self._do_spotify)
         r.addWidget(self._sp,1); r.addWidget(p); r.addWidget(lb); sec.row(r); pl.addWidget(sec)
 
-    def _build_tiktok((self, pl):
+    def _build_tiktok(self, pl):
         sec = Section("TikTok / Instagram Audio Extractor", C_TIKTOK)
         r = QHBoxLayout(); r.setSpacing(10)
         self._ti = E("Video Link...")
