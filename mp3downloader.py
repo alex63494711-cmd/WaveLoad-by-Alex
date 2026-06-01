@@ -418,16 +418,7 @@ class MainWindow(QMainWindow):
         scroll.setWidget(inner)
         ml.addWidget(scroll)
 
-        self._build_header(il)
-        self._build_yt(il)
-        self._build_search(il)
-        self._build_spotify(il)
-        self._build_tiktok(il)
-        self._build_dl_btn(il)
-        self._build_log(il)
-        il.addStretch()
-
-        # Settings panel overlay
+        # Settings panel overlay – must be created before header (button refs it)
         self._settings = SettingsPanel(
             root,
             lambda: self._output_dir,
@@ -436,6 +427,15 @@ class MainWindow(QMainWindow):
             lambda: self._open_folder,
             self._set_open_folder,
         )
+
+        self._build_header(il)
+        self._build_yt(il)
+        self._build_search(il)
+        self._build_spotify(il)
+        self._build_tiktok(il)
+        self._build_dl_btn(il)
+        self._build_log(il)
+        il.addStretch()
 
         QTimer.singleShot(400, self._check_tools)
 
