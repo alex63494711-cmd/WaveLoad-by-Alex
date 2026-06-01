@@ -330,6 +330,9 @@ class SettingsPanel(QWidget):
 
 # ── Main Window ───────────────────────────────────────────────────────────────
 class MainWindow(QMainWindow):
+    update_checked = pyqtSignal(str)
+    update_downloaded = pyqtSignal(str)
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle(APP_NAME); self.resize(720,820); self.setMinimumSize(600,560)
@@ -385,7 +388,9 @@ class MainWindow(QMainWindow):
         hl.addWidget(L(APP_NAME, 17, C_TEXT, True))
         hl.addWidget(L(f"v{VERSION}", 8, C_DIM))
         hl.addStretch()
-        u = B("Update","flat",36,90); u.clicked.connect(self._check_update); hl.addWidget(u)
+        self._ui_update_btn = B("Update","flat",36,120)
+        self._ui_update_btn.clicked.connect(self._check_update)
+        hl.addWidget(self._ui_update_btn)
         hl.addSpacing(8)
         s = B("⚙","flat",36,36); s.clicked.connect(self._settings.slide_in); hl.addWidget(s)
         pl.addWidget(w)
@@ -563,16 +568,66 @@ class MainWindow(QMainWindow):
             "-o",out,"--print","after_move:filepath",url],self._ti.clear)
 
     def _check_update(self):
-        self._log("Suche Updates...")
-        def run():
+        self._log("Suche Updates auf GitHub...")
+        
+        def on_check_finished(nv):
+            if nv != VERSION:
+                self._log(f"Update verfügbar: Version v{nv} steht bereit!")
+                self._ui_update_btn.setText(f"v{nv} installieren")
+                self._ui_update_btn.setStyleSheet(f"background: {C_GREEN}; color: #000000; font-weight: bold;")
+                try: self._ui_update_btn.clicked.disconnect()
+                except: pass
+                self._ui_update_btn.clicked.connect(lambda: self._download_and_install_update(nv))
+            else:
+                self._log(f"WaveLoad ist auf dem neuesten Stand (v{VERSION}).")
+
+        def run_check():
             try:
-                req=urllib.request.Request(GITHUB_RAW,headers={"User-Agent":"Mozilla/5.0"})
-                with urllib.request.urlopen(req,timeout=15) as r: content=r.read().decode("utf-8")
-                m=re.search(r'^VERSION\s*=\s*"([^"]+)"',content,re.MULTILINE)
-                nv=m.group(1) if m else VERSION
-                self._log(f"Aktuell (v{VERSION})" if nv==VERSION else f"Neue Version v{nv} verfügbar!")
-            except Exception as e: self._log(f"Update-Fehler: {e}")
-        threading.Thread(target=run,daemon=True).start()
+                req = urllib.request.Request(GITHUB_RAW, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=15) as r: 
+                    content = r.read().decode("utf-8")
+                m = re.search(r'^VERSION\s*=\s*"([^"]+)"', content, re.MULTILINE)
+                nv = m.group(1) if m else VERSION
+                self.update_checked.emit(nv)
+            except Exception as e: 
+                self.update_checked.emit(VERSION)
+                self._log(f"Update-Check fehlgeschlagen: {e}")
+
+        try: self.update_checked.disconnect()
+        except: pass
+        self.update_checked.connect(on_check_finished)
+        threading.Thread(target=run_check, daemon=True).start()
+
+    def _download_and_install_update(self, new_version):
+        self._log(f"Lade Update v{new_version} herunter...")
+        self._ui_update_btn.setEnabled(False)
+        self._ui_update_btn.setText("Wird geladen...")
+
+        def on_download_finished(exe_path):
+            if exe_path and os.path.exists(exe_path):
+                self._log("Update erfolgreich heruntergeladen. Starte Installation...")
+                subprocess.Popen([exe_path], creationflags=CNW)
+                QApplication.quit()
+            else:
+                self._log("Fehler beim Herunterladen der Updatedatei.")
+                self._ui_update_btn.setEnabled(True)
+                self._ui_update_btn.setText("Erneut versuchen")
+
+        def run_download():
+            try:
+                target_path = os.path.join(BASE_DIR, "WaveLoad_Update.exe")
+                req = urllib.request.Request(GITHUB_EXE, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req) as response, open(target_path, 'wb') as out_file:
+                    shutil.copyfileobj(response, out_file)
+                self.update_downloaded.emit(target_path)
+            except Exception as e:
+                self._log(f"Download-Fehler: {e}")
+                self.update_downloaded.emit("")
+
+        try: self.update_downloaded.disconnect()
+        except: pass
+        self.update_downloaded.connect(on_download_finished)
+        threading.Thread(target=run_download, daemon=True).start()
 
 
 # ── Login Window ──────────────────────────────────────────────────────────────
